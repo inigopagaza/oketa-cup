@@ -1,0 +1,76 @@
+[project]
+name = "oketa-cup"
+version = "0.1.0"
+description = "Bolilla del Mundial 2026 — app web para gestionar una quiniela entre amigos"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "django>=6.0.5",
+    "django-cors-headers>=4.9.0",
+    "djangorestframework>=3.17.1",
+    "djangorestframework-simplejwt>=5.5.1",
+    "drf-spectacular>=0.29.0",
+    "gunicorn>=26.0.0",
+    "psycopg2-binary>=2.9.12",
+    "python-decouple>=3.8",
+    "whitenoise>=6.12.0",
+]
+
+[dependency-groups]
+dev = [
+    "django-stubs>=6.0.4",
+    "factory-boy>=3.3.3",
+    "mypy>=2.1.0",
+    "pre-commit>=4.6.0",
+    "pytest>=9.0.3",
+    "pytest-cov>=7.1.0",
+    "pytest-django>=4.12.0",
+    "ruff>=0.15.13",
+]
+
+# ── Herramientas de desarrollo ────────────────────────────────────────────────
+
+[tool.ruff]
+line-length = 88
+target-version = "py313"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+    "DJ",  # flake8-django
+]
+ignore = ["E501"]  # line-length lo gestiona el formatter
+
+[tool.ruff.lint.isort]
+known-first-party = ["config", "apps"]
+
+[tool.mypy]
+python_version = "3.13"
+plugins = ["mypy_django_plugin.main"]
+ignore_missing_imports = true
+strict = false
+warn_unused_ignores = true
+warn_return_any = true
+
+[tool.django-stubs]
+django_settings_module = "config.settings.development"
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings.development"
+python_files = ["tests.py", "test_*.py", "*_test.py"]
+addopts = "--cov=apps --cov-report=term-missing --cov-report=xml -v"
+testpaths = ["apps"]
+
+[tool.coverage.run]
+source = ["apps"]
+omit = ["*/migrations/*", "*/tests/*", "*/test_*.py"]
+
+[tool.coverage.report]
+fail_under = 70
+show_missing = true
