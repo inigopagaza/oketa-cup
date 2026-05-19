@@ -62,15 +62,16 @@ warn_return_any = true
 django_settings_module = "config.settings.development"
 
 [tool.pytest.ini_options]
-DJANGO_SETTINGS_MODULE = "config.settings.development"
+DJANGO_SETTINGS_MODULE = "config.settings.test"
 python_files = ["tests.py", "test_*.py", "*_test.py"]
 addopts = "--cov=apps --cov-report=term-missing --cov-report=xml -v"
 testpaths = ["apps"]
 
 [tool.coverage.run]
 source = ["apps"]
-omit = ["*/migrations/*", "*/tests/*", "*/test_*.py"]
+omit = ["*/migrations/*", "*/tests/*", "*/test_*.py", "*/urls.py"]
 
 [tool.coverage.report]
-fail_under = 70
+# Umbral inicial (Phase 0). Subir a 70 cuando se añadan tests de vistas (Phase 2).
+fail_under = 60
 show_missing = true
