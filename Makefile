@@ -15,7 +15,7 @@ COMPOSE      := docker compose -f docker/docker-compose.yml
 ENV_FILE     := backend/.env
 MANAGE       := $(COMPOSE) exec backend python manage.py
 
-.PHONY: up up-d down logs shell migrate makemigrations test load-fixtures
+.PHONY: up up-d down logs shell migrate makemigrations test load-fixtures createsuperuser
 
 ## ── Ciclo de vida ─────────────────────────────────────────────────────────
 
@@ -44,6 +44,9 @@ makemigrations:
 
 load-fixtures:
 	$(COMPOSE) --env-file $(ENV_FILE) exec backend python manage.py load_fixtures --clear
+
+createsuperuser:
+	$(COMPOSE) --env-file $(ENV_FILE) exec backend python manage.py createsuperuser
 
 ## ── Calidad ───────────────────────────────────────────────────────────────
 

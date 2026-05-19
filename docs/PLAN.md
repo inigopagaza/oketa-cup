@@ -256,42 +256,48 @@ source .venv/bin/activate   # En macOS/Linux
 uv sync --all-groups
 
 # 3. Configurar variables de entorno
-cp .env.example .env
-# Editar .env con tus valores reales
+cp backend/.env.example backend/.env
+# Editar backend/.env con tus valores reales
 
 # 4. Instalar hooks de pre-commit
-uv run pre-commit install
+cd backend && uv run pre-commit install && cd ..
 
-# 5. Levantar servicios con Docker
-cd ..
-docker compose -f docker/docker-compose.yml up -d
+# 5. Levantar servicios con Docker (usa el Makefile de la raíz)
+make up-d
 
 # 6. Crear las tablas en la BD
-cd backend
-uv run python manage.py migrate
+make migrate
 
 # 7. Cargar datos iniciales
-uv run python manage.py load_teams
-uv run python manage.py createsuperuser
+make load-fixtures
+make createsuperuser
 ```
 
 ### Día a día
 
 ```bash
-# Levantar la BD
-docker compose -f docker/docker-compose.yml up -d db
+# Levantar todo (BD + Django)
+make up
 
-# Activar entorno virtual
+# Solo la BD (para correr Django fuera de Docker)
+make up-d  # y luego:
 source backend/.venv/bin/activate
-
-# Correr servidor Django
 cd backend && python manage.py runserver
 
-# Pasar tests
-pytest
+# Parar contenedores
+make down
 
-# Lint y formato
-ruff check . && ruff format .
+# Aplicar migraciones
+make migrate
+
+# Pasar tests
+make test
+
+# Shell de Django
+make shell
+
+# Lint y formato (pre-commit lo hace automáticamente en cada commit)
+cd backend && ruff check . && ruff format .
 ```
 
 ---
