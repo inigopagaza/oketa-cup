@@ -1,0 +1,31 @@
+# Pre-commit hooks para OketaCup
+#
+# Se ejecutan automáticamente antes de cada commit local.
+# Instalar con: uv run pre-commit install
+#
+# Ejecutar manualmente sobre todos los ficheros:
+#   uv run pre-commit run --all-files
+
+repos:
+  # ── Hooks básicos de pre-commit ──────────────────────────────────────────
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace       # Elimina espacios al final de línea
+      - id: end-of-file-fixer         # Garantiza newline al final de fichero
+      - id: check-yaml                # Valida sintaxis YAML
+      - id: check-json                # Valida sintaxis JSON
+      - id: check-toml                # Valida sintaxis TOML
+      - id: check-merge-conflict      # Detecta marcadores de merge sin resolver
+      - id: check-added-large-files   # Evita subir ficheros grandes accidentalmente
+        args: ["--maxkb=1000"]
+      - id: no-commit-to-branch       # Prohíbe commits directos a main y develop
+        args: ["--branch", "main", "--branch", "develop"]
+
+  # ── Ruff: linter + formatter (reemplaza black, isort, flake8) ────────────
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.13
+    hooks:
+      - id: ruff                      # Linting
+        args: ["--fix"]               # Auto-corrige lo que puede
+      - id: ruff-format               # Formateo (equivale a black)

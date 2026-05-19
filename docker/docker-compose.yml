@@ -1,0 +1,59 @@
+# Docker Compose para desarrollo local
+# Levanta PostgreSQL y Django con recarga automática de código.
+#
+# Uso:
+#   docker compose -f docker/docker-compose.yml up
+#   docker compose -f docker/docker-compose.yml up -d  (en background)
+#   docker compose -f docker/docker-compose.yml down
+
+services:
+
+  # ── Base de datos PostgreSQL ───────────────────────────────────────────────
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-oketa_cup}
+      POSTGRES_USER: ${DB_USER:-oketa}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Variable DB_PASSWORD requerida}
+    volumes:
+      # Los datos persisten aunque se pare el contenedor
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      # Solo expuesto localmente para poder usar herramientas como pgAdmin
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-oketa} -d ${DB_NAME:-oketa_cup}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Backend Django ─────────────────────────────────────────────────────────
+  backend:
+    build:
+      context: ..
+      dockerfile: docker/backend/Dockerfile
+      target: builder  # En dev usamos la etapa builder (tiene las herramientas)
+    restart: unless-stopped
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py runserver 0.0.0.0:8000"
+    volumes:
+      # Monta el código local para ver cambios sin reconstruir la imagen
+      - ../backend:/app
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.development
+      DB_HOST: db
+      DB_NAME: ${DB_NAME:-oketa_cup}
+      DB_USER: ${DB_USER:-oketa}
+      DB_PASSWORD: ${DB_PASSWORD:?Variable DB_PASSWORD requerida}
+      SECRET_KEY: ${SECRET_KEY:?Variable SECRET_KEY requerida}
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+    driver: local

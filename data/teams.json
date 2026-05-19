@@ -1,0 +1,61 @@
+[
+  {"name": "México",          "code": "MEX", "flag_emoji": "🇲🇽", "group": "A", "price": 36},
+  {"name": "Sudáfrica",       "code": "RSA", "flag_emoji": "🇿🇦", "group": "A", "price": 23},
+  {"name": "Corea del Sur",   "code": "KOR", "flag_emoji": "🇰🇷", "group": "A", "price": 41},
+  {"name": "Chequia",         "code": "CZE", "flag_emoji": "🇨🇿", "group": "A", "price": 22},
+
+  {"name": "Canadá",          "code": "CAN", "flag_emoji": "🇨🇦", "group": "B", "price": 39},
+  {"name": "Bosnia",          "code": "BIH", "flag_emoji": "🇧🇦", "group": "B", "price": 20},
+  {"name": "Qatar",           "code": "QAT", "flag_emoji": "🇶🇦", "group": "B", "price": 15},
+  {"name": "Suiza",           "code": "SUI", "flag_emoji": "🇨🇭", "group": "B", "price": 38},
+
+  {"name": "Brasil",          "code": "BRA", "flag_emoji": "🇧🇷", "group": "C", "price": 67},
+  {"name": "Marruecos",       "code": "MAR", "flag_emoji": "🇲🇦", "group": "C", "price": 52},
+  {"name": "Haití",           "code": "HAI", "flag_emoji": "🇭🇹", "group": "C", "price": 6},
+  {"name": "Escocia",         "code": "SCO", "flag_emoji": "🏴󠁧󠁢󠁳󠁣󠁴󠁿", "group": "C", "price": 26},
+
+  {"name": "Estados Unidos",  "code": "USA", "flag_emoji": "🇺🇸", "group": "D", "price": 40},
+  {"name": "Paraguay",        "code": "PAR", "flag_emoji": "🇵🇾", "group": "D", "price": 30},
+  {"name": "Australia",       "code": "AUS", "flag_emoji": "🇦🇺", "group": "D", "price": 25},
+  {"name": "Turquía",         "code": "TUR", "flag_emoji": "🇹🇷", "group": "D", "price": 35},
+
+  {"name": "Alemania",        "code": "GER", "flag_emoji": "🇩🇪", "group": "E", "price": 60},
+  {"name": "Curazao",         "code": "CUW", "flag_emoji": "🇨🇼", "group": "E", "price": 14},
+  {"name": "Costa de Marfil", "code": "CIV", "flag_emoji": "🇨🇮", "group": "E", "price": 33},
+  {"name": "Ecuador",         "code": "ECU", "flag_emoji": "🇪🇨", "group": "E", "price": 37},
+
+  {"name": "Países Bajos",    "code": "NED", "flag_emoji": "🇳🇱", "group": "F", "price": 55},
+  {"name": "Japón",           "code": "JPN", "flag_emoji": "🇯🇵", "group": "F", "price": 44},
+  {"name": "Suecia",          "code": "SWE", "flag_emoji": "🇸🇪", "group": "F", "price": 32},
+  {"name": "Túnez",           "code": "TUN", "flag_emoji": "🇹🇳", "group": "F", "price": 8},
+
+  {"name": "Bélgica",         "code": "BEL", "flag_emoji": "🇧🇪", "group": "G", "price": 46},
+  {"name": "Egipto",          "code": "EGY", "flag_emoji": "🇪🇬", "group": "G", "price": 34},
+  {"name": "Irán",            "code": "IRN", "flag_emoji": "🇮🇷", "group": "G", "price": 29},
+  {"name": "Nueva Zelanda",   "code": "NZL", "flag_emoji": "🇳🇿", "group": "G", "price": 7},
+
+  {"name": "España",          "code": "ESP", "flag_emoji": "🇪🇸", "group": "H", "price": 65},
+  {"name": "Cabo Verde",      "code": "CPV", "flag_emoji": "🇨🇻", "group": "H", "price": 11},
+  {"name": "Arabia Saudí",    "code": "KSA", "flag_emoji": "🇸🇦", "group": "H", "price": 24},
+  {"name": "Uruguay",         "code": "URU", "flag_emoji": "🇺🇾", "group": "H", "price": 50},
+
+  {"name": "Francia",         "code": "FRA", "flag_emoji": "🇫🇷", "group": "I", "price": 69},
+  {"name": "Senegal",         "code": "SEN", "flag_emoji": "🇸🇳", "group": "I", "price": 43},
+  {"name": "Irak",            "code": "IRQ", "flag_emoji": "🇮🇶", "group": "I", "price": 13},
+  {"name": "Noruega",         "code": "NOR", "flag_emoji": "🇳🇴", "group": "I", "price": 28},
+
+  {"name": "Argentina",       "code": "ARG", "flag_emoji": "🇦🇷", "group": "J", "price": 70},
+  {"name": "Argelia",         "code": "ALG", "flag_emoji": "🇩🇿", "group": "J", "price": 27},
+  {"name": "Austria",         "code": "AUT", "flag_emoji": "🇦🇹", "group": "J", "price": 42},
+  {"name": "Jordania",        "code": "JOR", "flag_emoji": "🇯🇴", "group": "J", "price": 9},
+
+  {"name": "Portugal",        "code": "POR", "flag_emoji": "🇵🇹", "group": "K", "price": 62},
+  {"name": "Congo (R.D.)",    "code": "COD", "flag_emoji": "🇨🇩", "group": "K", "price": 10},
+  {"name": "Uzbekistán",      "code": "UZB", "flag_emoji": "🇺🇿", "group": "K", "price": 12},
+  {"name": "Colombia",        "code": "COL", "flag_emoji": "🇨🇴", "group": "K", "price": 47},
+
+  {"name": "Inglaterra",      "code": "ENG", "flag_emoji": "🏴󠁧󠁢󠁥󠁮󠁧󠁿", "group": "L", "price": 64},
+  {"name": "Croacia",         "code": "CRO", "flag_emoji": "🇭🇷", "group": "L", "price": 53},
+  {"name": "Ghana",           "code": "GHA", "flag_emoji": "🇬🇭", "group": "L", "price": 31},
+  {"name": "Panamá",          "code": "PAN", "flag_emoji": "🇵🇦", "group": "L", "price": 18}
+]
