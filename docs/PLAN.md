@@ -60,7 +60,8 @@ oketa-cup/
 │   ├── backend/Dockerfile          # Imagen Docker del backend
 │   └── nginx/nginx.conf            # Configuración Nginx (producción)
 ├── data/
-│   └── teams.json                  # 48 selecciones + precios (fixture)
+│   ├── teams.json                  # 48 selecciones + precios (fixture)
+│   └── fixtures.json               # 104 partidos (72 grupos + 32 eliminatoria)
 ├── docs/
 │   ├── PLAN.md                     # Este fichero
 │   ├── ARCHITECTURE.md             # Decisiones técnicas en detalle
@@ -70,6 +71,7 @@ oketa-cup/
 │       ├── ci.yml                  # Tests + lint en cada push/PR
 │       └── deploy.yml              # Deploy automático a main (futuro)
 ├── .pre-commit-config.yaml         # Hooks locales antes de cada commit
+├── Makefile                        # Comandos de desarrollo (make up/down/migrate/test…)
 ├── .gitignore
 └── README.md
 ```
@@ -136,22 +138,38 @@ Objetivo: tener el entorno de desarrollo listo y el primer commit verde en CI.
 - [x] Proyecto Python con `uv` + entorno virtual `.venv` + `pyproject.toml`
 - [x] Estructura de carpetas del monorepo
 - [x] Configuración de `ruff` (linter+formatter), `mypy` (tipado), `pytest` (tests)
-- [x] `.env` configurado localmente (copiar de `.env.example`)
+- [x] `backend/.env` configurado localmente (copiar de `backend/.env.example`)
 - [x] Docker Compose dev (PostgreSQL `oketa-cup-db` + Django `oketa-cup-container`)
-- [x] `pre-commit` hooks instalados localmente
+- [x] **`Makefile`** en la raíz con comandos de desarrollo (`make up`, `make down`, `make migrate`, `make test`…)
+  - Encapsula `--env-file backend/.env` para que nadie tenga que recordarlo
+  - En producción las variables vienen del entorno del servidor, no de `--env-file`
+- [x] `pre-commit` hooks instalados localmente (`ruff` lint + format)
 - [x] GitHub Actions CI (lint + tests en cada push)
 - [x] Primer `docker compose up` funcionando
 
-### 🔴 FASE 1 — Backend Core & Admin *(en curso)*
+### ✅ FASE 1 — Backend Core: modelos, fixtures y signals *(completada 2026-05-19)*
 
-Objetivo: poder entrar partidos y que la puntuación se calcule sola.
+Objetivo: poder cargar el calendario completo y tener la base para la puntuación automática.
 
 - [x] Modelos: `User`, `NationalTeam`, `Match`, `TournamentConfig`, `Participant`, `ScoreLog`
-- [x] Migraciones iniciales (`0001_initial` en accounts, tournament, pool)
+- [x] Migraciones 0001–0004 aplicadas:
+  - `0001_initial` — modelos base
+  - `0002_nullable_teams_match_label_third_place` — FKs nullable, `match_label`, fase `3PL`
+  - `0003_add_round_of_32_phase` — fase `R32` (dieciseisavos, 48 equipos)
+  - `0004_add_venue_to_match` — campo `venue` (sede del partido)
 - [x] Fixture `data/teams.json` cargado en BD — 48 equipos, grupos A–L reales
+- [x] `data/fixtures.json` — 104 partidos (72 grupos + 32 eliminatoria), todos con sede
+- [x] Management command `load_fixtures` (flags: `--clear`, `--skip-knockout`)
+- [x] `signals.py` creado con punto de extensión para avance automático del bracket
+- [x] `apps.py` con `ready()` que importa signals
 - [x] Motor de puntuación (`apps/pool/services/scoring.py`) — 15/15 tests pasan
+- [x] Commit: `feat(tournament): add venue field, knockout phases, signals and load_fixtures` (771f5f1)
+
+### 🔴 FASE 1B — Admin y lógica de selección *(en curso)*
+
+Objetivo: poder entrar resultados desde el admin y calcular puntuación automáticamente.
+
 - [ ] `createsuperuser` + servidor arrancado por primera vez
-- [ ] Fixture calendario Mundial 2026 fase de grupos (`load_fixtures`)
 - [ ] Django Admin: señal `post_save` en `Match` → dispara `process_match_result`
 - [ ] Lógica de selección: validar presupuesto ≤ 220, bloquear tras confirmar
 - [ ] Tests pytest: modelos y vistas (cobertura > 70%)

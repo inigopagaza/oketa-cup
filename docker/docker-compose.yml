@@ -1,10 +1,13 @@
 # Docker Compose para desarrollo local
 # Levanta PostgreSQL y Django con recarga automática de código.
 #
-# Uso:
-#   docker compose -f docker/docker-compose.yml up
-#   docker compose -f docker/docker-compose.yml up -d  (en background)
-#   docker compose -f docker/docker-compose.yml down
+# Usa el Makefile de la raíz del proyecto en lugar de invocar este fichero directamente:
+#   make up       → levanta en primer plano
+#   make up-d     → levanta en background
+#   make down     → para los contenedores
+#
+# Si necesitas ejecutarlo manualmente:
+#   docker compose -f docker/docker-compose.yml --env-file backend/.env up
 
 services:
 
