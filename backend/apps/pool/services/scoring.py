@@ -65,10 +65,14 @@ def process_match_result(match: Match) -> list[ScoreLog]:
         )
         return []
 
-    # Evitar duplicados: si ya hay logs para este partido, no procesar de nuevo
-    if ScoreLog.objects.filter(match=match).exists():
-        logger.info("El partido %s ya fue procesado. Saltando.", match)
-        return []
+    # Idempotencia: eliminar logs previos de este partido antes de recalcular
+    deleted_count, _ = ScoreLog.objects.filter(match=match).delete()
+    if deleted_count:
+        logger.info(
+            "Eliminados %d ScoreLog previos del partido %s (recalculando).",
+            deleted_count,
+            match,
+        )
 
     created_logs: list[ScoreLog] = []
 
