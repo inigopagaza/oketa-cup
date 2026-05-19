@@ -10,6 +10,7 @@ services:
 
   # ── Base de datos PostgreSQL ───────────────────────────────────────────────
   db:
+    container_name: oketa-cup-db
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
@@ -30,6 +31,7 @@ services:
 
   # ── Backend Django ─────────────────────────────────────────────────────────
   backend:
+    container_name: oketa-cup-container
     build:
       context: ..
       dockerfile: docker/backend/Dockerfile
