@@ -1,8 +1,8 @@
 # OketaCup — Plan de Desarrollo
 
-> **Proyecto**: Bolilla del Mundial 2026 entre amigos  
-> **Objetivo secundario**: Aprender a desarrollar con IA (GitHub Copilot)  
-> **Fecha de inicio**: Mayo 2026  
+> **Proyecto**: Bolilla del Mundial 2026 entre amigos
+> **Objetivo secundario**: Aprender a desarrollar con IA (GitHub Copilot)
+> **Fecha de inicio**: Mayo 2026
 > **Mundial 2026**: ~11 de junio de 2026
 
 ---
@@ -111,24 +111,24 @@ oketa-cup/
 
 ## Precios de selecciones
 
-**Grupo A:** México (36), Sudáfrica (23), Corea del Sur (41), Chequia (22)  
-**Grupo B:** Canadá (39), Bosnia (20), Qatar (15), Suiza (38)  
-**Grupo C:** Brasil (67), Marruecos (52), Haití (6), Escocia (26)  
-**Grupo D:** Estados Unidos (40), Paraguay (30), Australia (25), Turquía (35)  
-**Grupo E:** Alemania (60), Curazao (14), Costa de Marfil (33), Ecuador (37)  
-**Grupo F:** Países Bajos (55), Japón (44), Suecia (32), Túnez (8)  
-**Grupo G:** Bélgica (46), Egipto (34), Irán (29), Nueva Zelanda (7)  
-**Grupo H:** España (65), Cabo Verde (11), Arabia Saudí (24), Uruguay (50)  
-**Grupo I:** Francia (69), Senegal (43), Irak (13), Noruega (28)  
-**Grupo J:** Argentina (70), Argelia (27), Austria (42), Jordania (9)  
-**Grupo K:** Portugal (62), Congo R.D. (10), Uzbekistán (12), Colombia (47)  
+**Grupo A:** México (36), Sudáfrica (23), Corea del Sur (41), Chequia (22)
+**Grupo B:** Canadá (39), Bosnia (20), Qatar (15), Suiza (38)
+**Grupo C:** Brasil (67), Marruecos (52), Haití (6), Escocia (26)
+**Grupo D:** Estados Unidos (40), Paraguay (30), Australia (25), Turquía (35)
+**Grupo E:** Alemania (60), Curazao (14), Costa de Marfil (33), Ecuador (37)
+**Grupo F:** Países Bajos (55), Japón (44), Suecia (32), Túnez (8)
+**Grupo G:** Bélgica (46), Egipto (34), Irán (29), Nueva Zelanda (7)
+**Grupo H:** España (65), Cabo Verde (11), Arabia Saudí (24), Uruguay (50)
+**Grupo I:** Francia (69), Senegal (43), Irak (13), Noruega (28)
+**Grupo J:** Argentina (70), Argelia (27), Austria (42), Jordania (9)
+**Grupo K:** Portugal (62), Congo R.D. (10), Uzbekistán (12), Colombia (47)
 **Grupo L:** Inglaterra (64), Croacia (53), Ghana (31), Panamá (18)
 
 ---
 
 ## Fases de desarrollo
 
-### 🔴 FASE 0 — Fundamentos *(completada)*
+### ✅ FASE 0 — Fundamentos *(completada 2026-05-19)*
 
 Objetivo: tener el entorno de desarrollo listo y el primer commit verde en CI.
 
@@ -136,24 +136,25 @@ Objetivo: tener el entorno de desarrollo listo y el primer commit verde en CI.
 - [x] Proyecto Python con `uv` + entorno virtual `.venv` + `pyproject.toml`
 - [x] Estructura de carpetas del monorepo
 - [x] Configuración de `ruff` (linter+formatter), `mypy` (tipado), `pytest` (tests)
-- [ ] `.env` configurado localmente (copiar de `.env.example`)
-- [ ] Docker Compose dev (PostgreSQL + Django)
-- [ ] `pre-commit` hooks instalados localmente
-- [ ] GitHub Actions CI (lint + tests en cada push)
-- [ ] Primer `docker compose up` funcionando
+- [x] `.env` configurado localmente (copiar de `.env.example`)
+- [x] Docker Compose dev (PostgreSQL `oketa-cup-db` + Django `oketa-cup-container`)
+- [x] `pre-commit` hooks instalados localmente
+- [x] GitHub Actions CI (lint + tests en cada push)
+- [x] Primer `docker compose up` funcionando
 
-### 🔴 FASE 1 — Backend Core & Admin *(siguiente)*
+### 🔴 FASE 1 — Backend Core & Admin *(en curso)*
 
 Objetivo: poder entrar partidos y que la puntuación se calcule sola.
 
-- [ ] Modelos: `User`, `NationalTeam`, `Match`, `TournamentConfig`, `Participant`, `ScoreLog`
-- [ ] Migraciones iniciales
-- [ ] Fixture `data/teams.json` cargado en BD (`load_teams` management command)
-- [ ] Fixture calendario Mundial 2026 fase de grupos
-- [ ] Django Admin personalizado (gestión completa)
+- [x] Modelos: `User`, `NationalTeam`, `Match`, `TournamentConfig`, `Participant`, `ScoreLog`
+- [x] Migraciones iniciales (`0001_initial` en accounts, tournament, pool)
+- [x] Fixture `data/teams.json` cargado en BD — 48 equipos, grupos A–L reales
+- [x] Motor de puntuación (`apps/pool/services/scoring.py`) — 15/15 tests pasan
+- [ ] `createsuperuser` + servidor arrancado por primera vez
+- [ ] Fixture calendario Mundial 2026 fase de grupos (`load_fixtures`)
+- [ ] Django Admin: señal `post_save` en `Match` → dispara `process_match_result`
 - [ ] Lógica de selección: validar presupuesto ≤ 220, bloquear tras confirmar
-- [ ] Motor de puntuación (`apps/pool/services/scoring.py`)
-- [ ] Tests pytest: modelos, puntuación, casos límite (cobertura > 70%)
+- [ ] Tests pytest: modelos y vistas (cobertura > 70%)
 
 ### 🟡 FASE 2 — Frontend: Django Templates *(después del backend)*
 
@@ -284,4 +285,6 @@ ruff check . && ruff format .
 | 2026-05-19 | 0 | Setup inicial: git, uv, pyproject.toml, estructura de carpetas |
 | 2026-05-19 | 0 | Modelos base: User, NationalTeam, Match, TournamentConfig, Participant, ScoreLog |
 | 2026-05-19 | 0 | Motor de puntuación en `apps/pool/services/scoring.py` |
+| 2026-05-19 | 0 | Docker Compose, Dockerfile multi-stage, GitHub Actions CI, pre-commit hooks |
+| 2026-05-19 | 0 | Migraciones `0001_initial`, 48 equipos cargados, 15/15 tests ✅ (65% cobertura) |
 | | | *(se irá completando)* |

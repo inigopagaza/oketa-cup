@@ -57,22 +57,34 @@ class Match(models.Model):
 
     class Phase(models.TextChoices):
         GROUP = "GRP", "Fase de grupos"
+        ROUND_OF_32 = "R32", "Dieciseisavos de final"
         ROUND_OF_16 = "R16", "Octavos de final"
         QUARTER_FINAL = "QF", "Cuartos de final"
         SEMI_FINAL = "SF", "Semifinales"
+        THIRD_PLACE = "3PL", "Tercer puesto"
         FINAL = "FIN", "Final"
 
     home_team = models.ForeignKey(
         NationalTeam,
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         related_name="home_matches",
         verbose_name="Local",
     )
     away_team = models.ForeignKey(
         NationalTeam,
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         related_name="away_matches",
         verbose_name="Visitante",
+    )
+    match_label = models.CharField(
+        max_length=60,
+        blank=True,
+        verbose_name="Etiqueta del cruce",
+        help_text="Descripción del cruce en fases eliminatorias, p.ej. '1A vs 2B'",
     )
     phase = models.CharField(
         max_length=3,
@@ -84,6 +96,11 @@ class Match(models.Model):
         blank=True,
         verbose_name="Grupo",
         help_text="Solo para partidos de fase de grupos",
+    )
+    venue = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name="Sede",
     )
     scheduled_at = models.DateTimeField(verbose_name="Fecha y hora")
     home_score = models.PositiveSmallIntegerField(
@@ -108,7 +125,11 @@ class Match(models.Model):
 
     def __str__(self) -> str:
         score = f"{self.home_score}-{self.away_score}" if self.is_finished else "vs"
-        return f"{self.home_team.name} {score} {self.away_team.name} ({self.get_phase_display()})"
+        home = self.home_team.name if self.home_team_id else "TBD"
+        away = self.away_team.name if self.away_team_id else "TBD"
+        if self.match_label and not self.home_team_id:
+            return f"{self.match_label} ({self.get_phase_display()})"
+        return f"{home} {score} {away} ({self.get_phase_display()})"
 
     @property
     def home_won(self) -> bool | None:
