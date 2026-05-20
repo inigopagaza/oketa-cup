@@ -15,6 +15,11 @@ COPY backend/pyproject.toml backend/uv.lock ./
 # Instalar dependencias en /app/.venv sin dependencias de dev
 RUN uv sync --frozen --no-dev
 
+# Activar el venv para los comandos siguientes (incluidos los de docker-compose en dev)
+ENV PATH="/app/.venv/bin:$PATH" \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
 # ── Etapa 2: runtime ──────────────────────────────────────────────────────────
 FROM python:3.13-slim AS runtime
 

@@ -41,11 +41,14 @@ services:
       target: builder  # En dev usamos la etapa builder (tiene las herramientas)
     restart: unless-stopped
     command: >
-      sh -c "python manage.py migrate &&
+      sh -c "uv sync --frozen &&
+             python manage.py migrate &&
              python manage.py runserver 0.0.0.0:8000"
     volumes:
       # Monta el código local para ver cambios sin reconstruir la imagen
       - ../backend:/app
+      # Volumen nombrado para el venv: evita que el mount anterior lo sobreescriba
+      - backend_venv:/app/.venv
     environment:
       DJANGO_SETTINGS_MODULE: config.settings.development
       DB_HOST: db
@@ -61,4 +64,6 @@ services:
 
 volumes:
   postgres_data:
+    driver: local
+  backend_venv:
     driver: local
