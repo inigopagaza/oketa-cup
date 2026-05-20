@@ -1,19 +1,131 @@
-<!DOCTYPE html>
-<html lang="es">
-<head><meta charset="UTF-8"><title>OketaCup — Seleccionar equipos</title></head>
-<body>
-<h1>Seleccionar equipos</h1>
-<p>Presupuesto: {{ budget }}🪙</p>
-{% if error %}<p class="error">{{ error }}</p>{% endif %}
-<form method="post" action="{% url 'pool:confirm_selection' %}">
-  {% csrf_token %}
-  {% for team in teams %}
-    <label>
-      <input type="checkbox" name="teams" value="{{ team.id }}">
-      {{ team.flag_emoji }} {{ team.name }} ({{ team.price }}🪙)
-    </label><br>
-  {% endfor %}
-  <button type="submit">Confirmar selección</button>
-</form>
-</body>
-</html>
+{% extends "base.html" %}
+{% block title %}Elegir equipos · OketaCup{% endblock %}
+
+{% block content %}
+<div
+  x-data="{
+    budget: {{ budget }},
+    selected: {},
+    get spent() {
+      return Object.values(this.selected).reduce((sum, p) => sum + p, 0);
+    },
+    get remaining() {
+      return this.budget - this.spent;
+    },
+    toggle(id, price) {
+      if (this.selected[id] !== undefined) {
+        delete this.selected[id];
+      } else {
+        this.selected[id] = price;
+      }
+    },
+    isSelected(id) {
+      return this.selected[id] !== undefined;
+    }
+  }"
+>
+
+  <!-- Header -->
+  <div class="flex items-start justify-between mb-6 gap-4 flex-wrap">
+    <div>
+      <h1 class="text-2xl font-bold">Elige tus selecciones</h1>
+      <p class="text-gray-500 dark:text-gray-400 text-sm mt-1">
+        Selecciona los equipos en los que apuestas. Presupuesto: <strong>{{ budget }}🪙</strong>
+      </p>
+    </div>
+
+    <!-- Presupuesto en tiempo real -->
+    <div class="card px-5 py-4 text-center min-w-[140px]">
+      <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Gastado</p>
+      <p class="text-2xl font-bold" :class="remaining < 0 ? 'text-red-500' : 'text-green-600 dark:text-green-400'">
+        <span x-text="spent"></span>🪙
+      </p>
+      <p class="text-xs mt-1" :class="remaining < 0 ? 'text-red-400' : 'text-gray-400'">
+        Quedan <span x-text="remaining"></span>🪙
+      </p>
+    </div>
+  </div>
+
+  {% if error %}
+    <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-sm rounded-lg px-4 py-3 mb-5">
+      {{ error }}
+    </div>
+  {% endif %}
+
+  <form method="post" action="{% url 'pool:confirm_selection' %}">
+    {% csrf_token %}
+
+    <!-- Grid de equipos por grupo -->
+    {% regroup teams by group as teams_by_group %}
+    {% for group in teams_by_group %}
+      <div class="mb-6">
+        <h2 class="text-sm font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">
+          Grupo {{ group.grouper }}
+        </h2>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {% for team in group.list %}
+            <label
+              class="card p-3 cursor-pointer select-none transition-all duration-150"
+              :class="isSelected({{ team.id }}) ? 'ring-2 ring-green-500 bg-green-50 dark:bg-green-900/20' : 'hover:border-gray-300 dark:hover:border-gray-500'"
+              @click.prevent="toggle({{ team.id }}, {{ team.price }})"
+            >
+              <input
+                type="checkbox"
+                name="teams"
+                value="{{ team.id }}"
+                class="sr-only"
+                :checked="isSelected({{ team.id }})"
+              />
+              <div class="text-center">
+                <p class="text-2xl mb-1">{{ team.flag_emoji }}</p>
+                <p class="text-sm font-semibold leading-tight">{{ team.name }}</p>
+                <p class="text-xs mt-1 font-bold" :class="isSelected({{ team.id }}) ? 'text-green-600 dark:text-green-400' : 'text-gray-400'">
+                  {{ team.price }}🪙
+                </p>
+              </div>
+            </label>
+          {% endfor %}
+        </div>
+      </div>
+    {% endfor %}
+
+    <!-- Predicciones individuales -->
+    <div class="card p-5 mb-6">
+      <h2 class="font-bold mb-4">Predicciones individuales <span class="text-gray-400 text-sm font-normal">(opcionales)</span></h2>
+      <div class="grid sm:grid-cols-3 gap-4">
+        <div>
+          <label class="block text-xs font-medium text-gray-500 mb-1">⭐ MVP del torneo (+20🪙)</label>
+          <input name="predicted_mvp" type="text" placeholder="Nombre del jugador"
+            class="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-500 mb-1">👟 Pichichi (+10🪙)</label>
+          <input name="predicted_top_scorer" type="text" placeholder="Nombre del jugador"
+            class="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-500 mb-1">🧤 Mejor portero (+5🪙)</label>
+          <input name="predicted_best_goalkeeper" type="text" placeholder="Nombre del jugador"
+            class="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+        </div>
+      </div>
+    </div>
+
+    <!-- Botón confirmar -->
+    <div class="flex items-center justify-between gap-4">
+      <p class="text-sm text-gray-500 dark:text-gray-400">
+        ⚠️ Una vez confirmado no podrás cambiar tu selección.
+      </p>
+      <button
+        type="submit"
+        :disabled="remaining < 0"
+        :class="remaining < 0 ? 'opacity-50 cursor-not-allowed' : ''"
+        class="btn-primary whitespace-nowrap"
+      >
+        Confirmar selección ✓
+      </button>
+    </div>
+
+  </form>
+</div>
+{% endblock %}

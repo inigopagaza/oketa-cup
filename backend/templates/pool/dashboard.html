@@ -1,8 +1,110 @@
-<!DOCTYPE html>
-<html lang="es">
-<head><meta charset="UTF-8"><title>OketaCup — Dashboard</title></head>
-<body>
-<h1>Dashboard</h1>
-<p>Hola, {{ participant.user.username }}. Puntos: {{ participant.total_points }}</p>
-</body>
-</html>
+{% extends "base.html" %}
+{% block title %}Dashboard · OketaCup{% endblock %}
+
+{% block content %}
+
+<div class="space-y-8">
+
+  <!-- Saludo -->
+  <div>
+    <h1 class="text-2xl font-bold">Hola, {{ participant.user.username }} 👋</h1>
+    <p class="text-gray-500 dark:text-gray-400 text-sm mt-1">
+      Tus puntos totales: <strong class="text-green-600 dark:text-green-400 text-lg">{{ participant.total_points }}🪙</strong>
+    </p>
+  </div>
+
+  <div class="grid md:grid-cols-2 gap-6">
+
+    <!-- Mis equipos -->
+    <div class="card p-5">
+      <h2 class="font-bold text-lg mb-4">Mis selecciones</h2>
+      {% if team_scores %}
+        <ul class="space-y-2">
+          {% for entry in team_scores %}
+            <li class="flex items-center justify-between">
+              <span class="flex items-center gap-2 text-sm">
+                <span class="text-xl">{{ entry.team.flag_emoji }}</span>
+                <span>{{ entry.team.name }}</span>
+              </span>
+              <span class="font-semibold text-green-600 dark:text-green-400 text-sm">
+                +{{ entry.points }}🪙
+              </span>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="text-gray-400 text-sm">No tienes equipos seleccionados.</p>
+      {% endif %}
+    </div>
+
+    <!-- Partidos de hoy -->
+    <div class="card p-5">
+      <h2 class="font-bold text-lg mb-4">Partidos de hoy</h2>
+      {% if todays_matches %}
+        <ul class="space-y-3">
+          {% for match in todays_matches %}
+            <li class="text-sm">
+              <div class="flex items-center justify-between gap-2">
+                <span class="flex items-center gap-1.5">
+                  <span>{{ match.home_team.flag_emoji }}</span>
+                  <span class="font-medium">{{ match.home_team.name }}</span>
+                </span>
+                {% if match.is_finished %}
+                  <span class="font-bold text-base tabular-nums">{{ match.home_score }}–{{ match.away_score }}</span>
+                {% else %}
+                  <span class="text-gray-400 text-xs">{{ match.scheduled_at|time:"H:i" }}</span>
+                {% endif %}
+                <span class="flex items-center gap-1.5 justify-end">
+                  <span class="font-medium">{{ match.away_team.name }}</span>
+                  <span>{{ match.away_team.flag_emoji }}</span>
+                </span>
+              </div>
+              {% if match.group %}
+                <p class="text-xs text-gray-400 mt-0.5">Grupo {{ match.group }}</p>
+              {% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="text-gray-400 text-sm">No hay partidos hoy.</p>
+      {% endif %}
+    </div>
+
+  </div>
+
+  <!-- Clasificación general -->
+  <div class="card p-5">
+    <h2 class="font-bold text-lg mb-4">Clasificación</h2>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide border-b border-gray-200 dark:border-gray-700">
+            <th class="pb-2 pr-3">#</th>
+            <th class="pb-2 pr-3">Participante</th>
+            <th class="pb-2 text-right">Puntos</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+          {% for p in ranking %}
+            <tr class="{% if p.user == request.user %}bg-green-50 dark:bg-green-900/10 font-semibold{% endif %}">
+              <td class="py-2.5 pr-3 text-gray-400 tabular-nums">{{ forloop.counter }}</td>
+              <td class="py-2.5 pr-3">
+                {{ p.user.username }}
+                {% if p.user == request.user %}<span class="text-green-600 dark:text-green-400 text-xs ml-1">← tú</span>{% endif %}
+              </td>
+              <td class="py-2.5 text-right font-bold text-green-600 dark:text-green-400 tabular-nums">
+                {{ p.total_points }}🪙
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p class="text-xs text-gray-400 mt-3 text-right">
+      <a href="{% url 'tournament:results' %}" class="hover:text-green-600 transition-colors">Ver resultados del Mundial →</a>
+    </p>
+  </div>
+
+</div>
+
+{% endblock %}

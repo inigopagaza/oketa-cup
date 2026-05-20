@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Resultados · OketaCup{% endblock %}
+
+{% block content %}
+
+<h1 class="text-2xl font-bold mb-6">Resultados del Mundial 2026</h1>
+
+{% if matches_by_phase %}
+  {% for section in matches_by_phase %}
+    <div class="mb-8">
+      <h2 class="text-sm font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">
+        {{ section.label }}
+      </h2>
+
+      <div class="card divide-y divide-gray-100 dark:divide-gray-800">
+        {% for match in section.matches %}
+          <div class="px-4 py-3 flex items-center justify-between gap-3 text-sm">
+
+            <!-- Local -->
+            <div class="flex items-center gap-2 flex-1 justify-end">
+              <span class="font-medium text-right hidden sm:block">{{ match.home_team.name }}</span>
+              <span class="text-xl">{{ match.home_team.flag_emoji }}</span>
+            </div>
+
+            <!-- Marcador -->
+            <div class="text-center min-w-[64px]">
+              {% if match.is_finished %}
+                <span class="font-bold text-base tabular-nums">{{ match.home_score }}–{{ match.away_score }}</span>
+              {% else %}
+                <span class="text-gray-400 text-xs tabular-nums">{{ match.scheduled_at|date:"d/m" }}<br>{{ match.scheduled_at|time:"H:i" }}</span>
+              {% endif %}
+              {% if match.group %}
+                <p class="text-xs text-gray-400 mt-0.5">Grupo {{ match.group }}</p>
+              {% endif %}
+            </div>
+
+            <!-- Visitante -->
+            <div class="flex items-center gap-2 flex-1">
+              <span class="text-xl">{{ match.away_team.flag_emoji }}</span>
+              <span class="font-medium hidden sm:block">{{ match.away_team.name }}</span>
+            </div>
+
+            <!-- Estado -->
+            {% if match.is_finished %}
+              <span class="text-xs text-green-600 dark:text-green-400 font-medium hidden md:block">Finalizado</span>
+            {% else %}
+              <span class="text-xs text-gray-400 hidden md:block">Pendiente</span>
+            {% endif %}
+
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  {% endfor %}
+{% else %}
+  <div class="card p-8 text-center text-gray-400">
+    <p class="text-4xl mb-3">⚽</p>
+    <p>El calendario todavía no está cargado.</p>
+  </div>
+{% endif %}
+
+{% endblock %}

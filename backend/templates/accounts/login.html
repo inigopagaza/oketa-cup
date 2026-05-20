@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Entrar · OketaCup{% endblock %}
+
+{% block content %}
+<div class="max-w-sm mx-auto mt-16">
+
+  <div class="card p-8">
+    <div class="text-center mb-8">
+      <p class="text-4xl mb-2">⚽</p>
+      <h1 class="text-2xl font-bold">OketaCup 2026</h1>
+      <p class="text-gray-500 dark:text-gray-400 text-sm mt-1">Bolilla del Mundial entre amigos</p>
+    </div>
+
+    {% if error %}
+      <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-sm rounded-lg px-4 py-3 mb-5">
+        {{ error }}
+      </div>
+    {% endif %}
+
+    <form method="post" class="space-y-4">
+      {% csrf_token %}
+
+      <div>
+        <label class="block text-sm font-medium mb-1.5" for="username">Usuario</label>
+        <input
+          id="username"
+          name="username"
+          type="text"
+          required
+          autofocus
+          autocomplete="username"
+          class="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+        />
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium mb-1.5" for="password">Contraseña</label>
+        <input
+          id="password"
+          name="password"
+          type="password"
+          required
+          autocomplete="current-password"
+          class="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+        />
+      </div>
+
+      <button type="submit" class="btn-primary w-full text-center py-2.5">
+        Entrar
+      </button>
+    </form>
+  </div>
+
+</div>
+{% endblock %}
