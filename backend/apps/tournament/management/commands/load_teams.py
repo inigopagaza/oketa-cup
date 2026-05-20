@@ -35,9 +35,9 @@ class Command(BaseCommand):
         if options["file"]:
             data_path = Path(options["file"])
         else:
-            # BASE_DIR del proyecto (directorio padre de manage.py)
-            base_dir = Path(__file__).resolve().parents[5]
-            data_path = base_dir / "data" / "teams.json"
+            from django.conf import settings
+
+            data_path = Path(settings.BASE_DIR) / "data" / "teams.json"
 
         if not data_path.exists():
             raise CommandError(f"No se encontró el fichero: {data_path}")

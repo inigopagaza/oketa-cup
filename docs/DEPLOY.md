@@ -54,7 +54,7 @@ Anótalas en un lugar seguro (gestor de contraseñas):
 ```
 PROXMOX_IP=192.168.1.X        # IP que asignes al servidor en tu red local
 LXC_IP=192.168.1.Y            # IP del contenedor LXC
-DOMINIO=oketa-cup.duckdns.org # o el que elijas
+DOMINIO=oketa-cup.eu.org # o el que elijas
 POSTGRES_PASSWORD=...          # genera con: openssl rand -base64 32
 DJANGO_SECRET_KEY=...          # genera con: openssl rand -base64 50
 ```
