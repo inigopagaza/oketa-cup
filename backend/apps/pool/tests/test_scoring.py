@@ -7,6 +7,7 @@ Cubre los casos principales del sistema de puntos:
 - Campeón del Mundial
 - Premios individuales (MVP, Pichichi, Zamora)
 - Protección contra duplicados
+- Clasificación de grupos (ADVANCE_GRP, TOP_GROUP)
 """
 
 import pytest
@@ -16,7 +17,9 @@ from apps.pool.services.scoring import (
     POINTS_CHAMPION,
     POINTS_DRAW,
     POINTS_FINAL,
+    POINTS_FIRST_IN_GROUP,
     POINTS_MVP,
+    POINTS_QUALIFY_GROUP,
     POINTS_QUARTER_FINAL,
     POINTS_ROUND_OF_16,
     POINTS_SEMI_FINAL,
@@ -25,9 +28,10 @@ from apps.pool.services.scoring import (
     award_champion,
     award_individual_prizes,
     award_phase_advancement,
+    process_group_completion,
     process_match_result,
 )
-from apps.tournament.models import Match
+from apps.tournament.models import Match, NationalTeam
 
 
 @pytest.mark.django_db
@@ -207,3 +211,121 @@ class TestParticipantTotalPoints:
     def test_total_points_sin_logs_es_cero(self, participant_alice):
         """Sin ScoreLogs, total_points debe ser 0."""
         assert participant_alice.total_points == 0
+
+
+# ── Helpers para TestGroupCompletion ─────────────────────────────────────────
+
+
+def _make_match(db, home, away, hs, as_, group="Z", finished=True):
+    """Crea un partido de grupos y lo devuelve."""
+    from django.utils import timezone
+
+    return Match.objects.create(
+        home_team=home,
+        away_team=away,
+        phase=Match.Phase.GROUP,
+        group=group,
+        scheduled_at=timezone.now(),
+        home_score=hs,
+        away_score=as_,
+        is_finished=finished,
+    )
+
+
+@pytest.mark.django_db
+class TestGroupCompletion:
+    """Tests de la clasificación de grupos (ADVANCE_GRP y TOP_GROUP)."""
+
+    @pytest.fixture
+    def four_teams(self, db):
+        """Cuatro selecciones en el grupo Z de prueba."""
+        t1 = NationalTeam.objects.create(name="Alpha", code="ALP", group="Z", price=10)
+        t2 = NationalTeam.objects.create(name="Beta", code="BET", group="Z", price=10)
+        t3 = NationalTeam.objects.create(name="Gamma", code="GAM", group="Z", price=10)
+        t4 = NationalTeam.objects.create(name="Delta", code="DEL", group="Z", price=10)
+        return t1, t2, t3, t4
+
+    @pytest.fixture
+    def alice_with_alpha(self, db, four_teams):
+        """Participante Alice con el equipo Alpha (1º del grupo Z)."""
+        from apps.accounts.models import User
+        from apps.pool.models import Participant
+
+        user = User.objects.create_user(username="alice_z", password="testpass123")
+        participant = Participant.objects.create(user=user)
+        participant.teams.add(four_teams[0])  # Alpha
+        return participant
+
+    @pytest.fixture
+    def bob_with_beta(self, db, four_teams):
+        """Participante Bob con el equipo Beta (2º del grupo Z)."""
+        from apps.accounts.models import User
+        from apps.pool.models import Participant
+
+        user = User.objects.create_user(username="bob_z", password="testpass123")
+        participant = Participant.objects.create(user=user)
+        participant.teams.add(four_teams[1])  # Beta
+        return participant
+
+    def _six_matches(self, db, teams, group="Z"):
+        """Crea los 6 partidos del grupo con resultado fijo: Alpha gana todo."""
+        t1, t2, t3, t4 = teams
+        # Alpha (t1) gana los 3, Beta (t2) gana 2 contra t3 y t4
+        _make_match(db, t1, t2, 1, 0, group)
+        _make_match(db, t1, t3, 2, 0, group)
+        _make_match(db, t1, t4, 3, 0, group)
+        _make_match(db, t2, t3, 1, 0, group)
+        _make_match(db, t2, t4, 1, 0, group)
+        _make_match(db, t3, t4, 0, 0, group)
+
+    def test_grupo_incompleto_no_genera_logs(self, db, four_teams, alice_with_alpha):
+        """No debe calcular puntos si faltan partidos por jugar."""
+        t1, t2, t3, t4 = four_teams
+        # Solo 5 partidos de 6
+        _make_match(db, t1, t2, 1, 0)
+        _make_match(db, t1, t3, 2, 0)
+        _make_match(db, t1, t4, 3, 0)
+        _make_match(db, t2, t3, 1, 0)
+        _make_match(db, t2, t4, 1, 0)
+
+        logs = process_group_completion("Z")
+        assert logs == []
+
+    def test_primero_recibe_advance_y_top(
+        self, db, four_teams, alice_with_alpha, bob_with_beta
+    ):
+        """El 1º del grupo debe recibir ADVANCE_GRP (+6) y TOP_GROUP (+2)."""
+        self._six_matches(db, four_teams)
+        logs = process_group_completion("Z")
+
+        alice_logs = [lg for lg in logs if lg.participant == alice_with_alpha]
+        points = {lg.points_earned for lg in alice_logs}
+        assert POINTS_QUALIFY_GROUP in points
+        assert POINTS_FIRST_IN_GROUP in points
+
+    def test_segundo_recibe_advance_no_top(
+        self, db, four_teams, alice_with_alpha, bob_with_beta
+    ):
+        """El 2º del grupo debe recibir ADVANCE_GRP (+6) pero NO TOP_GROUP."""
+        self._six_matches(db, four_teams)
+        logs = process_group_completion("Z")
+
+        bob_logs = [lg for lg in logs if lg.participant == bob_with_beta]
+        points = {lg.points_earned for lg in bob_logs}
+        assert POINTS_QUALIFY_GROUP in points
+        assert POINTS_FIRST_IN_GROUP not in points
+
+    def test_idempotencia_no_duplica_logs(
+        self, db, four_teams, alice_with_alpha, bob_with_beta
+    ):
+        """Llamar dos veces a process_group_completion no debe duplicar logs."""
+        self._six_matches(db, four_teams)
+
+        process_group_completion("Z")
+        process_group_completion("Z")
+
+        advance_logs = ScoreLog.objects.filter(
+            reason="Clasificado desde grupo Z",
+        ).count()
+        # 2 participantes con equipos que clasifican (alice y bob)
+        assert advance_logs == 2

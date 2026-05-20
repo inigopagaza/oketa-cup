@@ -45,6 +45,9 @@ POINTS_MVP = 20
 POINTS_TOP_SCORER = 10
 POINTS_BEST_GOALKEEPER = 5
 
+# Número de partidos por grupo (4 equipos, todos contra todos → C(4,2) = 6)
+MATCHES_PER_GROUP = 6
+
 
 def process_match_result(match: Match) -> list[ScoreLog]:
     """
@@ -65,10 +68,14 @@ def process_match_result(match: Match) -> list[ScoreLog]:
         )
         return []
 
-    # Evitar duplicados: si ya hay logs para este partido, no procesar de nuevo
-    if ScoreLog.objects.filter(match=match).exists():
-        logger.info("El partido %s ya fue procesado. Saltando.", match)
-        return []
+    # Idempotencia: eliminar logs previos de este partido antes de recalcular
+    deleted_count, _ = ScoreLog.objects.filter(match=match).delete()
+    if deleted_count:
+        logger.info(
+            "Eliminados %d ScoreLog previos del partido %s (recalculando).",
+            deleted_count,
+            match,
+        )
 
     created_logs: list[ScoreLog] = []
 
@@ -94,6 +101,103 @@ def process_match_result(match: Match) -> list[ScoreLog]:
             logger.debug("ScoreLog creado: %s", log)
 
     return created_logs
+
+
+def process_group_completion(group: str) -> list[ScoreLog]:
+    """
+    Otorga puntos de clasificación cuando todos los partidos de un grupo terminan.
+
+    - ADVANCE_GRP (+6): 1º y 2º clasificado del grupo.
+    - TOP_GROUP   (+2): solo al 1º del grupo.
+
+    Los 8 mejores terceros (que también avanzan) se calculan aparte, cuando
+    los 12 grupos estén completos, mediante `process_best_third_places()`.
+
+    Idempotente: borra y recrea los logs con las razones de este grupo antes
+    de recalcular, por lo que es seguro llamarlo al corregir un resultado.
+
+    Args:
+        group: Letra del grupo (A-L).
+
+    Returns:
+        Lista de ScoreLog creados, o lista vacía si el grupo no está completo.
+    """
+    group_matches = Match.objects.filter(
+        phase=Match.Phase.GROUP, group=group
+    ).select_related("home_team", "away_team")
+
+    total = group_matches.count()
+    finished = group_matches.filter(is_finished=True).count()
+    if total < MATCHES_PER_GROUP or finished < total:
+        logger.debug(
+            "Grupo %s: %d/%d partidos terminados. Esperando.", group, finished, total
+        )
+        return []
+
+    # ── Calcular la tabla del grupo ───────────────────────────────────────
+    teams_stats: dict[NationalTeam, dict[str, int]] = {}
+    for match in group_matches:
+        for team in (match.home_team, match.away_team):
+            if team and team not in teams_stats:
+                teams_stats[team] = {"pts": 0, "gf": 0, "ga": 0}
+
+    for match in group_matches:
+        if match.home_score is None or match.away_score is None:
+            continue
+        home, away = match.home_team, match.away_team
+        if home is None or away is None:
+            continue
+        hs, as_ = match.home_score, match.away_score
+        if hs > as_:
+            teams_stats[home]["pts"] += 3
+        elif hs == as_:
+            teams_stats[home]["pts"] += 1
+            teams_stats[away]["pts"] += 1
+        else:
+            teams_stats[away]["pts"] += 3
+        teams_stats[home]["gf"] += hs
+        teams_stats[home]["ga"] += as_
+        teams_stats[away]["gf"] += as_
+        teams_stats[away]["ga"] += hs
+
+    # Orden: puntos ↓, diferencia de goles ↓, goles a favor ↓
+    standings = sorted(
+        teams_stats.items(),
+        key=lambda x: (x[1]["pts"], x[1]["gf"] - x[1]["ga"], x[1]["gf"]),
+        reverse=True,
+    )
+
+    # ── Idempotencia: borrar logs previos de clasificación de este grupo ──
+    advance_reason = f"Clasificado desde grupo {group}"
+    top_reason = f"1\u00ba de grupo {group}"
+    del1, _ = ScoreLog.objects.filter(reason=advance_reason).delete()
+    del2, _ = ScoreLog.objects.filter(reason=top_reason).delete()
+    deleted = del1 + del2
+    if deleted:
+        logger.info(
+            "Grupo %s: %d logs de clasificación previos eliminados.", group, deleted
+        )
+
+    # ── Crear los nuevos logs ─────────────────────────────────────────────
+    created: list[ScoreLog] = []
+    for rank, (team, stats) in enumerate(standings):
+        if rank >= 2:
+            break  # Solo top 2 reciben ADVANCE_GRP automáticamente
+
+        logger.info(
+            "Grupo %s: %s → %dº (pts=%d gd=%+d gf=%d)",
+            group,
+            team,
+            rank + 1,
+            stats["pts"],
+            stats["gf"] - stats["ga"],
+            stats["gf"],
+        )
+        created.extend(_award_team_points(team, POINTS_QUALIFY_GROUP, advance_reason))
+        if rank == 0:
+            created.extend(_award_team_points(team, POINTS_FIRST_IN_GROUP, top_reason))
+
+    return created
 
 
 def award_phase_advancement(team: NationalTeam, phase: Match.Phase) -> list[ScoreLog]:
