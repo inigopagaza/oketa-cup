@@ -492,7 +492,22 @@ Admin guarda resultado partido R32 (is_finished=True)
 
 ---
 
-### �🟢 FASE 3D — API REST *(post-lanzamiento)*
+### 🔵 FASE 5 — Despliegue en casa *(siguiente)*
+
+Objetivo: app accesible desde internet con dominio propio, desplegada en servidor Proxmox doméstico.
+Guía paso a paso completa: [`docs/DEPLOY.md`](DEPLOY.md)
+
+- [ ] `docker-compose.prod.yml` (Nginx + Gunicorn + PostgreSQL, sin dev-tools)
+- [ ] Dockerfile multi-stage (build ligero, runtime sin root)
+- [ ] `config/settings/production.py` con variables de entorno
+- [ ] Proxmox VE instalado + LXC Ubuntu 22.04 con Docker
+- [ ] Cloudflare Tunnel (acceso externo sin abrir puertos, SSL automático)
+- [ ] Dominio gratuito (DuckDNS o EU.org) vinculado a Cloudflare
+- [ ] GitHub Actions `deploy.yml`: push a `main` → SSH al servidor → `docker compose up -d`
+- [ ] Backups automáticos de PostgreSQL con `pg_dump` + cron
+- [ ] Firewall (UFW) + fail2ban en el servidor
+
+### 🟢 FASE 6 — API REST *(post-lanzamiento)*
 
 Objetivo: exponer todos los datos vía API para consumir desde React.
 
@@ -501,7 +516,7 @@ Objetivo: exponer todos los datos vía API para consumir desde React.
 - [ ] Swagger UI con `drf-spectacular`
 - [ ] Tests de endpoints
 
-### 🟢 FASE 4 — Frontend: React *(post-lanzamiento, educativo)*
+### 🟢 FASE 7 — Frontend: React *(post-lanzamiento, educativo)*
 
 Objetivo: misma app que la Fase 2 pero en React, para comparar enfoques.
 
@@ -509,17 +524,6 @@ Objetivo: misma app que la Fase 2 pero en React, para comparar enfoques.
 - [ ] Axios con interceptores JWT
 - [ ] Mismas páginas que la versión templates
 - [ ] Comparativa documentada en `docs/ARCHITECTURE.md`
-
-### 🔵 FASE 5 — Despliegue en casa *(cuando el servidor esté listo)*
-
-Objetivo: app accesible en la red local / con dominio propio.
-
-- [ ] Dockerfile multi-stage (build ligero, runtime sin root)
-- [ ] `docker-compose.prod.yml` (Nginx + Gunicorn + PostgreSQL)
-- [ ] SSL (Let's Encrypt o self-signed para red interna)
-- [ ] GitHub Actions deploy: SSH + `docker compose up -d` en push a `main`
-- [ ] Guía Proxmox en `docs/DEPLOYMENT.md`
-- [ ] Backups automáticos de PostgreSQL
 
 ---
 
