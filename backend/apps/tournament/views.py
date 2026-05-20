@@ -161,7 +161,7 @@ def gestion(request: HttpRequest) -> HttpResponse:
     from apps.pool.models import Participant, ScoreLog
 
     pending_matches = (
-        Match.objects.filter(is_finished=False)
+        Match.objects.filter(is_finished=False, scheduled_at__lte=timezone.now())
         .select_related("home_team", "away_team")
         .order_by("scheduled_at")
     )
