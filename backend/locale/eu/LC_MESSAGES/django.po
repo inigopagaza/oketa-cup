@@ -13,6 +13,15 @@ msgstr ""
 msgid "Dashboard"
 msgstr "Aginte-panela"
 
+msgid "Grupos"
+msgstr "Taldeak"
+
+msgid "Eliminatorias"
+msgstr "Kanporaketa"
+
+msgid "Gestión"
+msgstr "Kudeaketa"
+
 msgid "Resultados"
 msgstr "Emaitzak"
 
@@ -219,3 +228,67 @@ msgstr "Ez dago parte-hartzailerik."
 
 msgid "Adjudicar premios"
 msgstr "Sariak esleitu"
+
+# --- Vista Grupos ---
+
+msgid "Clasificaciones"
+msgstr "Sailkapen-taulak"
+
+msgid "Equipo"
+msgstr "Selekzioa"
+
+msgid "Partidos jugados"
+msgstr "Jokatutako partidak"
+
+msgid "Victorias"
+msgstr "Garaipenak"
+
+msgid "Empates"
+msgstr "Berdinketak"
+
+msgid "Derrotas"
+msgstr "Porrota"
+
+msgid "Goles a favor"
+msgstr "Aldeko golak"
+
+msgid "Goles en contra"
+msgstr "Aurkako golak"
+
+msgid "Diferencia de goles"
+msgstr "Gol-diferentzia"
+
+msgid "Clasificado"
+msgstr "Sailkatuta"
+
+msgid "Posible repesca"
+msgstr "Birgaitze posiblea"
+
+msgid "No hay datos de equipos cargados todavía."
+msgstr "Oraindik ez daude talderik kargatuta."
+
+# --- Vista Eliminatorias ---
+
+msgid "Bracket del Mundial 2026"
+msgstr "2026ko Mundialaren bracket-a"
+
+msgid "El bracket aún no está configurado. Los partidos se muestran en orden cronológico."
+msgstr "Bracket-a ez dago konfiguratu oraindik. Partidak data-ordenan agertzen dira."
+
+msgid "Configurar"
+msgstr "Konfiguratu"
+
+msgid "Dieciseisavos"
+msgstr "Hamaseirenak"
+
+msgid "Octavos"
+msgstr "Zortzirenak"
+
+msgid "Cuartos"
+msgstr "Laurdenak"
+
+msgid "3er puesto"
+msgstr "3. postua"
+
+msgid "No hay partidos eliminatorios cargados todavía."
+msgstr "Oraindik ez daude kanporaketa-partidarik kargatuta."

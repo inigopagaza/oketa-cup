@@ -1,4 +1,6 @@
-"""Vistas de la app tournament (stub inicial)."""
+"""Vistas de la app tournament."""
+
+from collections import defaultdict
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -15,7 +17,7 @@ from apps.pool.services.scoring import (
     process_match_result,
 )
 
-from .models import Match, TournamentConfig
+from .models import Match, NationalTeam, TournamentConfig
 
 
 def results(request: HttpRequest) -> HttpResponse:
@@ -257,3 +259,142 @@ def gestion_configure_bracket(request: HttpRequest) -> HttpResponse:
         messages.error(request, f"Error al configurar el bracket: {exc}")
 
     return redirect("tournament:gestion")
+
+
+def grupos(request: HttpRequest) -> HttpResponse:
+    """Clasificaciones de la fase de grupos."""
+    group_letters = sorted(
+        NationalTeam.objects.order_by("group")
+        .values_list("group", flat=True)
+        .distinct()  # pyright: ignore[reportAttributeAccessIssue]
+    )
+    groups_data = []
+    for letter in group_letters:
+        group_teams = list(NationalTeam.objects.filter(group=letter))  # pyright: ignore[reportAttributeAccessIssue]
+        matches = list(
+            Match.objects.filter(phase=Match.Phase.GROUP, group=letter)  # pyright: ignore[reportAttributeAccessIssue]
+            .select_related("home_team", "away_team")
+            .order_by("scheduled_at")
+        )
+        standings: dict[int, dict] = {
+            t.id: {
+                "team": t,
+                "pj": 0,
+                "g": 0,
+                "e": 0,
+                "p": 0,
+                "gf": 0,
+                "gc": 0,
+                "pts": 0,
+            }
+            for t in group_teams
+        }
+        for match in matches:
+            if not match.is_finished:
+                continue
+            h, a = match.home_team_id, match.away_team_id
+            if h not in standings or a not in standings:
+                continue
+            hs, as_ = match.home_score or 0, match.away_score or 0
+            standings[h]["pj"] += 1
+            standings[a]["pj"] += 1
+            standings[h]["gf"] += hs
+            standings[h]["gc"] += as_
+            standings[a]["gf"] += as_
+            standings[a]["gc"] += hs
+            if hs > as_:
+                standings[h]["g"] += 1
+                standings[h]["pts"] += 3
+                standings[a]["p"] += 1
+            elif as_ > hs:
+                standings[a]["g"] += 1
+                standings[a]["pts"] += 3
+                standings[h]["p"] += 1
+            else:
+                standings[h]["e"] += 1
+                standings[h]["pts"] += 1
+                standings[a]["e"] += 1
+                standings[a]["pts"] += 1
+        sorted_s = sorted(
+            standings.values(),
+            key=lambda x: (-x["pts"], -(x["gf"] - x["gc"]), -x["gf"]),
+        )
+        for i, s in enumerate(sorted_s):
+            s["dg"] = s["gf"] - s["gc"]
+            s["pos"] = i + 1
+        groups_data.append({"letter": letter, "standings": sorted_s})
+    return render(request, "tournament/grupos.html", {"groups_data": groups_data})
+
+
+def eliminatorias(request: HttpRequest) -> HttpResponse:
+    """Bracket del torneo en árbol horizontal."""
+    final = (
+        Match.objects.filter(phase=Match.Phase.FINAL)  # pyright: ignore[reportAttributeAccessIssue]
+        .select_related("home_team", "away_team")
+        .first()
+    )
+    third = (
+        Match.objects.filter(phase=Match.Phase.THIRD_PLACE)  # pyright: ignore[reportAttributeAccessIssue]
+        .select_related("home_team", "away_team")
+        .first()
+    )
+    all_ko = list(
+        Match.objects.filter(  # pyright: ignore[reportAttributeAccessIssue]
+            phase__in=[
+                Match.Phase.ROUND_OF_32,
+                Match.Phase.ROUND_OF_16,
+                Match.Phase.QUARTER_FINAL,
+                Match.Phase.SEMI_FINAL,
+            ]
+        ).select_related("home_team", "away_team")
+    )
+    bracket_ready = any(m.next_match_id for m in all_ko)
+
+    # Índice: next_match_id → feeders ordenados ('home' primero, h > a)
+    feeders: dict[int, list] = defaultdict(list)
+    for m in all_ko:
+        if m.next_match_id:
+            feeders[m.next_match_id].append(m)
+    for k in feeders:
+        feeders[k].sort(key=lambda x: x.next_match_slot, reverse=True)
+
+    sf_matches = sorted(
+        [m for m in all_ko if m.phase == Match.Phase.SEMI_FINAL],
+        key=lambda x: x.next_match_slot,
+        reverse=True,
+    )
+    qf_ordered: list = []
+    r16_ordered: list = []
+    r32_ordered: list = []
+    for sf in sf_matches:
+        for qf in feeders.get(sf.id, []):
+            for r16 in feeders.get(qf.id, []):
+                r32_ordered.extend(feeders.get(r16.id, []))
+                r16_ordered.append(r16)
+            qf_ordered.append(qf)
+
+    if not qf_ordered:
+        # Bracket no configurado: mostrar en orden de fecha
+        phase_map: dict = defaultdict(list)
+        for m in all_ko:
+            phase_map[m.phase].append(m)
+        for k in phase_map:
+            phase_map[k].sort(key=lambda x: x.scheduled_at)
+        r32_ordered = phase_map[Match.Phase.ROUND_OF_32]
+        r16_ordered = phase_map[Match.Phase.ROUND_OF_16]
+        qf_ordered = phase_map[Match.Phase.QUARTER_FINAL]
+        sf_matches = phase_map[Match.Phase.SEMI_FINAL]
+
+    return render(
+        request,
+        "tournament/eliminatorias.html",
+        {
+            "r32": r32_ordered,
+            "r16": r16_ordered,
+            "qf": qf_ordered,
+            "sf": sf_matches,
+            "final": final,
+            "third": third,
+            "bracket_ready": bracket_ready,
+        },
+    )

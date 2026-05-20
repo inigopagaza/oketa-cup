@@ -8,6 +8,8 @@ app_name = "tournament"
 
 urlpatterns = [
     path("resultados/", views.results, name="results"),
+    path("grupos/", views.grupos, name="grupos"),
+    path("eliminatorias/", views.eliminatorias, name="eliminatorias"),
     path(
         "admin/resultado/<int:match_id>/",
         views.admin_set_result,

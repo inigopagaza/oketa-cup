@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Grupos" %} · OketaCup{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-bold mb-1">⚽ {% trans "Fase de grupos" %}</h1>
+<p class="text-sm text-gray-500 dark:text-gray-400 mb-6">{% trans "Clasificaciones" %}</p>
+
+{% if groups_data %}
+<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+  {% for group in groups_data %}
+    <div class="card overflow-hidden">
+
+      <!-- Cabecera del grupo -->
+      <div class="px-4 py-2 bg-green-600 dark:bg-green-700 text-white font-bold text-sm tracking-wide">
+        {% trans "Grupo" %} {{ group.letter }}
+      </div>
+
+      <!-- Tabla de clasificación -->
+      <table class="w-full text-xs">
+        <thead>
+          <tr class="text-gray-400 border-b border-gray-100 dark:border-gray-800">
+            <th class="px-2 py-1.5 text-left w-5">#</th>
+            <th class="px-2 py-1.5 text-left">{% trans "Equipo" %}</th>
+            <th class="px-1 py-1.5 text-center w-7" title="{% trans 'Partidos jugados' %}">PJ</th>
+            <th class="px-1 py-1.5 text-center w-7" title="{% trans 'Victorias' %}">G</th>
+            <th class="px-1 py-1.5 text-center w-7" title="{% trans 'Empates' %}">B</th>
+            <th class="px-1 py-1.5 text-center w-7" title="{% trans 'Derrotas' %}">P</th>
+            <th class="px-1 py-1.5 text-center w-7" title="{% trans 'Goles a favor' %}">GA</th>
+            <th class="px-1 py-1.5 text-center w-7" title="{% trans 'Goles en contra' %}">GK</th>
+            <th class="px-1 py-1.5 text-center w-7" title="{% trans 'Diferencia de goles' %}">DG</th>
+            <th class="px-2 py-1.5 text-center w-8 font-bold" title="{% trans 'Puntos' %}">Pts</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+          {% for row in group.standings %}
+            <tr class="
+              {% if row.pos <= 2 %}border-l-2 border-green-500 bg-green-100 dark:bg-green-900/25
+              {% elif row.pos == 3 %}border-l-2 border-amber-400 bg-amber-50 dark:bg-amber-900/20
+              {% endif %}
+            ">
+              <td class="px-2 py-2 text-gray-400 font-medium">{{ row.pos }}</td>
+              <td class="px-2 py-2 font-medium">
+                <div class="flex items-center gap-1.5">
+                  <span>{{ row.team.flag_emoji }}</span>
+                  <span class="truncate">{{ row.team.name }}</span>
+                </div>
+              </td>
+              <td class="px-1 py-2 text-center tabular-nums text-gray-600 dark:text-gray-400">{{ row.pj }}</td>
+              <td class="px-1 py-2 text-center tabular-nums text-gray-600 dark:text-gray-400">{{ row.g }}</td>
+              <td class="px-1 py-2 text-center tabular-nums text-gray-600 dark:text-gray-400">{{ row.e }}</td>
+              <td class="px-1 py-2 text-center tabular-nums text-gray-600 dark:text-gray-400">{{ row.p }}</td>
+              <td class="px-1 py-2 text-center tabular-nums text-gray-600 dark:text-gray-400">{{ row.gf }}</td>
+              <td class="px-1 py-2 text-center tabular-nums text-gray-600 dark:text-gray-400">{{ row.gc }}</td>
+              <td class="px-1 py-2 text-center tabular-nums font-medium
+                {% if row.dg > 0 %}text-green-700 dark:text-green-400
+                {% elif row.dg < 0 %}text-red-500 dark:text-red-400
+                {% else %}text-gray-400{% endif %}">
+                {% if row.dg > 0 %}+{% endif %}{{ row.dg }}
+              </td>
+              <td class="px-2 py-2 text-center tabular-nums font-bold text-gray-900 dark:text-gray-100">{{ row.pts }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      <!-- Leyenda -->
+      <div class="px-3 py-1.5 border-t border-gray-100 dark:border-gray-800 flex gap-3 text-[10px] text-gray-500 dark:text-gray-400">
+        <span class="flex items-center gap-1">
+          <span class="inline-block w-2.5 h-2.5 rounded-sm bg-green-500 flex-shrink-0"></span>
+          {% trans "Clasificado" %}
+        </span>
+        <span class="flex items-center gap-1">
+          <span class="inline-block w-2.5 h-2.5 rounded-sm bg-amber-400 flex-shrink-0"></span>
+          {% trans "Posible repesca" %}
+        </span>
+      </div>
+
+    </div>
+  {% endfor %}
+</div>
+
+{% else %}
+  <div class="card px-4 py-8 text-center text-gray-400">
+    {% trans "No hay datos de equipos cargados todavía." %}
+  </div>
+{% endif %}
+{% endblock %}
