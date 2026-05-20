@@ -71,7 +71,7 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        fixtures_path = Path(settings.BASE_DIR).parent / "data" / "fixtures.json"
+        fixtures_path = Path(settings.BASE_DIR) / "data" / "fixtures.json"
         if not fixtures_path.exists():
             raise CommandError(f"No se encontró el fichero: {fixtures_path}")
 
