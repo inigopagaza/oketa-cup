@@ -12,6 +12,7 @@ fixtures (hay tres referencias que apuntan a la fase incorrecta).
 import json
 from pathlib import Path
 
+from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 from django.utils.dateparse import parse_datetime
 
@@ -70,7 +71,7 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        fixtures_path = Path(__file__).resolve().parents[5] / "data" / "fixtures.json"
+        fixtures_path = Path(settings.BASE_DIR).parent / "data" / "fixtures.json"
         if not fixtures_path.exists():
             raise CommandError(f"No se encontró el fichero: {fixtures_path}")
 
