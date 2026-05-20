@@ -124,6 +124,18 @@ def confirm_selection(request: HttpRequest) -> HttpResponse:
             },
         )
 
+    if not predicted_mvp or not predicted_top_scorer or not predicted_best_goalkeeper:
+        teams = NationalTeam.objects.all().order_by("group", "name")
+        return render(
+            request,
+            "pool/select_teams.html",
+            {
+                "teams": teams,
+                "budget": config.budget,
+                "error": "Debes rellenar los tres campos de predicciones individuales (MVP, Pichichi y Mejor portero).",
+            },
+        )
+
     participant, _ = Participant.objects.get_or_create(user=request.user)
     participant.teams.set(selected_teams)
     participant.predicted_mvp = predicted_mvp

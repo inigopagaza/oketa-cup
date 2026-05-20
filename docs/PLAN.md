@@ -223,32 +223,92 @@ Objetivo: poder cargar el calendario completo y tener la base para la puntuació
 - [x] Commit: `feat(tournament): add venue field, knockout phases, signals and load_fixtures` (771f5f1)
 - [x] Commit: `feat(pool): connect post_save signal and fix idempotent scoring (DELETE+INSERT)` (8f3761e)
 
-### 🔴 FASE 1B — Admin y lógica de selección *(en curso)*
+### ✅ FASE 1B — Admin y lógica de puntuación *(completada 2026-05-20)*
 
 Objetivo: poder entrar resultados desde el admin y calcular puntuación bajo petición.
 
 - [x] `scoring.py`: idempotencia real — DELETE + INSERT al recalcular (soporta corrección de resultados)
-- [x] `scoring.py`: `process_group_completion(group)` — calcula clasificación cuando todos los partidos del grupo terminan
+- [x] `scoring.py`: `process_group_completion(group)` — calcula clasificación (ADVANCE_GRP +6, TOP_GROUP +2)
 - [x] `admin.py`: `MatchAdmin` con `list_editable` para `home_score`, `away_score`, `is_finished`
 - [x] **Decisión: cálculo bajo petición** — admin actions en lugar de `post_save` automático
-- [ ] `signals.py`: eliminar `on_match_saved` (cálculo ya no es automático)
-- [ ] `admin.py`: action "Recalcular puntuaciones" → `process_match_result` por partido
-- [ ] `admin.py`: action "Calcular clasificación de grupos" → `process_group_completion` por grupo
-- [ ] `createsuperuser` + verificar flujo completo en admin
-- [ ] Lógica de selección de equipos: `Participant` elige equipos, valida presupuesto ≤ 220, bloquea tras confirmar
-- [ ] Tests pytest (cobertura > 70%)
+- [x] `signals.py`: eliminado `on_match_saved`; solo queda punto de extensión para bracket (Fase 2)
+- [x] `admin.py`: action *"Recalcular puntuaciones"* → `process_match_result` por partido seleccionado
+- [x] `admin.py`: action *"Calcular clasificación de grupos"* → `process_group_completion` por grupo
+- [x] Tests pytest: 19/19 pasan (incluye `TestGroupCompletion` con 4 casos)
+- [x] Commit: `feat(admin): recalculate scores via admin actions instead of post_save signal` (37ac14b)
 
-### 🟡 FASE 2 — Frontend: Django Templates *(después del backend)*
+### ✅ FASE 1C — Selección de equipos y tests *(completada 2026-05-20)*
+
+Objetivo: flujo completo de inscripción de participantes antes del inicio del Mundial.
+
+- [x] Lógica de selección de equipos — `views.py`: `select_teams`, `confirm_selection`, `dashboard`
+- [x] Validación de presupuesto ≤ 220 en `confirm_selection` (redisplay con error si supera)
+- [x] Bloqueo de selección tras confirmar — `has_confirmed_selection = True` en `User`
+- [x] Templates stub: `pool/dashboard.html`, `pool/select_teams.html`
+- [x] Tests de views: 12 tests cubriendo todos los flujos (auth, redirección, validación, predicciones)
+- [x] Cobertura total: 73.27% (objetivo > 70% ✅, `pool/views.py` 100%)
+- [x] Commit: `feat(pool): add selection views tests and stub templates` (34f8047)
+
+### ✅ FASE 2 — Frontend: Django Templates *(completada 2026-05-20)*
 
 Objetivo: flujo completo de usuario funcionando en móvil.
 
-- [ ] Página de login (admin / usuario normal)
-- [ ] Selección de equipos: grid, presupuesto en tiempo real (Alpine.js)
-- [ ] Dashboard: clasificación, mis equipos, partidos del día
-- [ ] Página de resultados del Mundial por fase
-- [ ] Modo claro/oscuro (Tailwind + localStorage)
-- [ ] Switcher de idioma es/eu
-- [ ] Responsive mobile-first
+- [x] `base.html`: layout con nav, modo claro/oscuro (Alpine.js + localStorage), responsive
+- [x] `accounts/login.html`: formulario de login con manejo de errores
+- [x] `pool/select_teams.html`: grid de equipos por grupo, contador de presupuesto en tiempo real (Alpine.js)
+- [x] `pool/dashboard.html`: clasificación general, mis equipos con puntos, partidos del día
+- [x] `tournament/results.html`: todos los partidos agrupados por fase con marcadores
+- [x] Tailwind v4 CDN + Alpine.js CDN (sin build step)
+- [x] Responsive mobile-first
+- [x] Commit: `feat(frontend): Django Templates frontend with Tailwind v4 + Alpine.js` (aec1a34)
+
+### ✅ FASE 2B — Multiidioma es/eu *(completada 2026-05-20)*
+
+Objetivo: la interfaz en Castellano y Euskara; el idioma se recuerda entre sesiones.
+
+**Decisión de diseño:** Django i18n nativo (`USE_I18N`, `LocaleMiddleware`, `.po/.mo`) en lugar
+de soluciones de terceros. El cambio de idioma persiste en dos niveles:
+
+1. **Sesión** — `LocaleMiddleware` lee la clave `_language` de la sesión HTTP.
+2. **Perfil del usuario** — `User.preferred_language` (campo ya existente del modelo).
+   Así si el usuario limpia las cookies su idioma preferido se recupera en el próximo login.
+
+**Flujo al cambiar de idioma:**
+
+```
+Usuario pulsa [ES] o [EU] en el navbar
+    → POST /i18n/set_language/?language=eu
+        → set_language_view (wrapper de Django):
+            1. Llama a django.views.i18n.set_language → guarda "_language" en sesión
+            2. Si user.is_authenticated → user.preferred_language = "eu" → save()
+        → redirect a request.path (misma página)
+    → LocaleMiddleware en el siguiente request activa la traducción correspondiente
+```
+
+**Flujo al hacer login:**
+
+```
+login_view autentica al usuario
+    → request.session["_language"] = user.preferred_language
+    → el LocaleMiddleware activa automáticamente su idioma desde el primer request
+```
+
+**Implementación:**
+
+- [x] `config/urls.py`: añadida ruta `i18n/set_language/` apuntando a vista personalizada
+- [x] `apps/accounts/views.set_language_view`: wrappea `django.views.i18n.set_language` y persiste en `user.preferred_language`
+- [x] `apps/accounts/views.login_view`: tras autenticar, pone `request.session["_language"]` del perfil del usuario
+- [x] `base.html`: switcher **ES | EU** en el navbar (botones que hacen POST a `set_language`)
+  - El botón del idioma activo se resalta en verde; el otro aparece en gris
+  - Usa `{{ LANGUAGE_CODE }}` del context processor `django.template.context_processors.i18n`
+- [x] `{% load i18n %}` + `{% trans "..." %}` en `base.html`, `login.html` y `dashboard.html`
+- [x] `locale/eu/LC_MESSAGES/django.po`: traducciones al Euskara de todos los textos de la UI
+  - Navegación: Dashboard → Aginte-panela, Resultados → Emaitzak, Elegir equipos → Taldeak hautatu, Salir → Irten, Entrar → Sartu
+  - Dashboard: Mis selecciones → Nire taldeak, Partidos de hoy → Gaurko partidak, Clasificación → Sailkapena
+  - Login: Usuario → Erabiltzailea, Contraseña → Pasahitza
+  - Footer: OketaCup 2026 · Mundial en casa → OketaCup 2026 · Mundialak etxean
+- [x] `locale/eu/LC_MESSAGES/django.mo`: compilado con `msgfmt`
+- [x] Settings ya tenían `USE_I18N=True`, `LANGUAGES=[("es","Castellano"),("eu","Euskara")]`, `LocaleMiddleware` y `LOCALE_PATHS` configurados desde la Fase 0
 
 ### 🟢 FASE 3 — API REST *(post-lanzamiento)*
 

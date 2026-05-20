@@ -1,5 +1,6 @@
 {% extends "base.html" %}
-{% block title %}Entrar · OketaCup{% endblock %}
+{% load i18n %}
+{% block title %}{% trans "Entrar" %} · OketaCup{% endblock %}
 
 {% block content %}
 <div class="max-w-sm mx-auto mt-16">
@@ -8,7 +9,7 @@
     <div class="text-center mb-8">
       <p class="text-4xl mb-2">⚽</p>
       <h1 class="text-2xl font-bold">OketaCup 2026</h1>
-      <p class="text-gray-500 dark:text-gray-400 text-sm mt-1">Bolilla del Mundial entre amigos</p>
+      <p class="text-gray-500 dark:text-gray-400 text-sm mt-1">{% trans "Bolilla del Mundial entre amigos" %}</p>
     </div>
 
     {% if error %}
@@ -21,7 +22,7 @@
       {% csrf_token %}
 
       <div>
-        <label class="block text-sm font-medium mb-1.5" for="username">Usuario</label>
+        <label class="block text-sm font-medium mb-1.5" for="username">{% trans "Usuario" %}</label>
         <input
           id="username"
           name="username"
@@ -34,7 +35,7 @@
       </div>
 
       <div>
-        <label class="block text-sm font-medium mb-1.5" for="password">Contraseña</label>
+        <label class="block text-sm font-medium mb-1.5" for="password">{% trans "Contraseña" %}</label>
         <input
           id="password"
           name="password"
@@ -46,7 +47,7 @@
       </div>
 
       <button type="submit" class="btn-primary w-full text-center py-2.5">
-        Entrar
+        {% trans "Entrar" %}
       </button>
     </form>
   </div>

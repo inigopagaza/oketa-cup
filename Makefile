@@ -15,7 +15,7 @@ COMPOSE      := docker compose -f docker/docker-compose.yml
 ENV_FILE     := backend/.env
 MANAGE       := $(COMPOSE) exec backend python manage.py
 
-.PHONY: up up-d down logs shell migrate makemigrations test load-fixtures createsuperuser
+.PHONY: up up-d down db logs shell migrate makemigrations test load-fixtures createsuperuser
 
 ## ── Ciclo de vida ─────────────────────────────────────────────────────────
 
@@ -24,6 +24,10 @@ up:
 
 up-d:
 	$(COMPOSE) --env-file $(ENV_FILE) up -d
+
+## Solo la BD (para desarrollar Django fuera de Docker)
+db:
+	$(COMPOSE) --env-file $(ENV_FILE) up -d db
 
 down:
 	$(COMPOSE) --env-file $(ENV_FILE) down

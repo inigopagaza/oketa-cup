@@ -1,0 +1,168 @@
+# Basque (Euskara) translations for OketaCup.
+# Copyright (C) 2026 OketaCup
+#
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: eu\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+# --- Navegación ---
+
+msgid "Dashboard"
+msgstr "Aginte-panela"
+
+msgid "Resultados"
+msgstr "Emaitzak"
+
+msgid "Elegir equipos"
+msgstr "Taldeak hautatu"
+
+msgid "Salir"
+msgstr "Irten"
+
+msgid "Entrar"
+msgstr "Sartu"
+
+msgid "Cambiar tema"
+msgstr "Gaia aldatu"
+
+# --- Footer ---
+
+msgid "OketaCup 2026 · Mundial en casa 🏆"
+msgstr "OketaCup 2026 · Mundialak etxean 🏆"
+
+# --- Login ---
+
+msgid "Bolilla del Mundial entre amigos"
+msgstr "Mundialeko kiñola lagunekin"
+
+msgid "Usuario o contraseña incorrectos."
+msgstr "Erabiltzailea edo pasahitza okerrak dira."
+
+msgid "Usuario"
+msgstr "Erabiltzailea"
+
+msgid "Contraseña"
+msgstr "Pasahitza"
+
+# --- Dashboard ---
+
+msgid "Hola"
+msgstr "Kaixo"
+
+msgid "Tus puntos totales:"
+msgstr "Zure puntu guztiak:"
+
+msgid "Mis selecciones"
+msgstr "Nire taldeak"
+
+msgid "No tienes equipos seleccionados."
+msgstr "Ez daukazu talderik hautatuta."
+
+msgid "Partidos de hoy"
+msgstr "Gaurko partidak"
+
+msgid "No hay partidos hoy."
+msgstr "Gaur ez dago partidarik."
+
+msgid "Clasificación"
+msgstr "Sailkapena"
+
+msgid "Participante"
+msgstr "Parte-hartzailea"
+
+msgid "Puntos"
+msgstr "Puntu"
+
+msgid "puntos"
+msgstr "puntu"
+
+# --- Selección de equipos ---
+
+msgid "Elige tus selecciones"
+msgstr "Aukeratu zure taldeak"
+
+msgid "Selecciona los equipos en los que apuestas. Presupuesto:"
+msgstr "Aukeratu apustu egiten duzun taldeak. Aurrekontua:"
+
+msgid "Gastado"
+msgstr "Gastua"
+
+msgid "Quedan"
+msgstr "Gelditzen dira"
+
+msgid "Grupo"
+msgstr "Taldea"
+
+msgid "Predicciones individuales"
+msgstr "Banakako iragarpenak"
+
+msgid "opcionales"
+msgstr "aukerakoak"
+
+msgid "MVP del torneo"
+msgstr "Txapelketako MVP-a"
+
+msgid "Pichichi"
+msgstr "Goleatzailerik onena"
+
+msgid "Mejor portero"
+msgstr "Atezain onena"
+
+msgid "Nombre del jugador"
+msgstr "Jokalariaren izena"
+
+msgid "Una vez confirmado no podrás cambiar tu selección."
+msgstr "Behin berretuta ezin izango duzu zure hautaketa aldatu."
+
+msgid "Confirmar selección"
+msgstr "Hautaketa baieztatu"
+
+# --- Resultados ---
+
+msgid "Resultados del Mundial 2026"
+msgstr "2026ko Mundialaren emaitzak"
+
+msgid "Fase de grupos"
+msgstr "Talde fasea"
+
+msgid "Dieciseisavos de final"
+msgstr "Hamaseirenak"
+
+msgid "Octavos de final"
+msgstr "Zortzirenak"
+
+msgid "Cuartos de final"
+msgstr "Final-Laurdenak"
+
+msgid "Semifinales"
+msgstr "Final-Erdiak"
+
+msgid "3er y 4º puesto"
+msgstr "3. eta 4. postua"
+
+msgid "Final"
+msgstr "Finala"
+
+#. Ej: "Gr. A" → "A Tald."
+#, python-format
+msgid "Gr. %(group)s"
+msgstr "%(group)s Tald."
+
+msgid "Am."
+msgstr "Am."
+
+msgid "Finalizado"
+msgstr "Amaituta"
+
+msgid "Pendiente"
+msgstr "Zain"
+
+msgid "El calendario todavía no está cargado."
+msgstr "Egutegia ez dago kargatuta oraindik."
+
+# Formato de fecha en la página de resultados (fase de grupos)
+msgid "l, d/m/Y"
+msgstr "Y/m/d"

@@ -1,5 +1,6 @@
 {% extends "base.html" %}
-{% block title %}Elegir equipos · OketaCup{% endblock %}
+{% load i18n %}
+{% block title %}{% trans "Elegir equipos" %} · OketaCup{% endblock %}
 
 {% block content %}
 <div
@@ -28,20 +29,20 @@
   <!-- Header -->
   <div class="flex items-start justify-between mb-6 gap-4 flex-wrap">
     <div>
-      <h1 class="text-2xl font-bold">Elige tus selecciones</h1>
+      <h1 class="text-2xl font-bold">{% trans "Elige tus selecciones" %}</h1>
       <p class="text-gray-500 dark:text-gray-400 text-sm mt-1">
-        Selecciona los equipos en los que apuestas. Presupuesto: <strong>{{ budget }}🪙</strong>
+        {% trans "Selecciona los equipos en los que apuestas. Presupuesto:" %} <strong>{{ budget }}🪙</strong>
       </p>
     </div>
 
     <!-- Presupuesto en tiempo real -->
     <div class="card px-5 py-4 text-center min-w-[140px]">
-      <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Gastado</p>
+      <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">{% trans "Gastado" %}</p>
       <p class="text-2xl font-bold" :class="remaining < 0 ? 'text-red-500' : 'text-green-600 dark:text-green-400'">
         <span x-text="spent"></span>🪙
       </p>
       <p class="text-xs mt-1" :class="remaining < 0 ? 'text-red-400' : 'text-gray-400'">
-        Quedan <span x-text="remaining"></span>🪙
+        {% trans "Quedan" %} <span x-text="remaining"></span>🪙
       </p>
     </div>
   </div>
@@ -60,7 +61,7 @@
     {% for group in teams_by_group %}
       <div class="mb-6">
         <h2 class="text-sm font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">
-          Grupo {{ group.grouper }}
+          {% trans "Grupo" %} {{ group.grouper }}
         </h2>
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {% for team in group.list %}
@@ -91,21 +92,21 @@
 
     <!-- Predicciones individuales -->
     <div class="card p-5 mb-6">
-      <h2 class="font-bold mb-4">Predicciones individuales <span class="text-gray-400 text-sm font-normal">(opcionales)</span></h2>
+      <h2 class="font-bold mb-4">{% trans "Predicciones individuales" %}</h2>
       <div class="grid sm:grid-cols-3 gap-4">
         <div>
-          <label class="block text-xs font-medium text-gray-500 mb-1">⭐ MVP del torneo (+20🪙)</label>
-          <input name="predicted_mvp" type="text" placeholder="Nombre del jugador"
+          <label class="block text-xs font-medium text-gray-500 mb-1">⭐ {% trans "MVP del torneo" %} <span class="text-green-600 dark:text-green-400">+20 {% trans "puntos" %}✨</span></label>
+          <input name="predicted_mvp" type="text" placeholder="{% trans 'Nombre del jugador' %}" required
             class="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
         </div>
         <div>
-          <label class="block text-xs font-medium text-gray-500 mb-1">👟 Pichichi (+10🪙)</label>
-          <input name="predicted_top_scorer" type="text" placeholder="Nombre del jugador"
+          <label class="block text-xs font-medium text-gray-500 mb-1">👟 {% trans "Pichichi" %} <span class="text-green-600 dark:text-green-400">+10 {% trans "puntos" %}✨</span></label>
+          <input name="predicted_top_scorer" type="text" placeholder="{% trans 'Nombre del jugador' %}" required
             class="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
         </div>
         <div>
-          <label class="block text-xs font-medium text-gray-500 mb-1">🧤 Mejor portero (+5🪙)</label>
-          <input name="predicted_best_goalkeeper" type="text" placeholder="Nombre del jugador"
+          <label class="block text-xs font-medium text-gray-500 mb-1">🧤 {% trans "Mejor portero" %} <span class="text-green-600 dark:text-green-400">+5 {% trans "puntos" %}✨</span></label>
+          <input name="predicted_best_goalkeeper" type="text" placeholder="{% trans 'Nombre del jugador' %}" required
             class="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
         </div>
       </div>
@@ -114,7 +115,7 @@
     <!-- Botón confirmar -->
     <div class="flex items-center justify-between gap-4">
       <p class="text-sm text-gray-500 dark:text-gray-400">
-        ⚠️ Una vez confirmado no podrás cambiar tu selección.
+        ⚠️ {% trans "Una vez confirmado no podrás cambiar tu selección." %}
       </p>
       <button
         type="submit"
@@ -122,7 +123,7 @@
         :class="remaining < 0 ? 'opacity-50 cursor-not-allowed' : ''"
         class="btn-primary whitespace-nowrap"
       >
-        Confirmar selección ✓
+        {% trans "Confirmar selección" %} ✓
       </button>
     </div>
 
