@@ -21,4 +21,9 @@ urlpatterns = [
         views.gestion_set_r32_teams,
         name="gestion_set_r32_teams",
     ),
+    path(
+        "gestion/configurar-bracket/",
+        views.gestion_configure_bracket,
+        name="gestion_configure_bracket",
+    ),
 ]

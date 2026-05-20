@@ -1,6 +1,8 @@
 """Vistas de la app tournament (stub inicial)."""
 
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.management import call_command
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.translation import gettext_lazy as _
@@ -238,4 +240,20 @@ def gestion_set_r32_teams(request: HttpRequest, match_id: int) -> HttpResponse:
         match.away_team = NationalTeam.objects.filter(id=int(away_id)).first()
 
     match.save(update_fields=["home_team", "away_team"])
+    return redirect("tournament:gestion")
+
+
+@login_required
+@require_POST
+def gestion_configure_bracket(request: HttpRequest) -> HttpResponse:
+    """Configura next_match / next_match_slot para el bracket completo. Solo staff."""
+    if not request.user.is_staff:
+        return redirect("pool:dashboard")
+
+    try:
+        call_command("setup_bracket", verbosity=0)
+        messages.success(request, "✓ Bracket configurado correctamente.")
+    except Exception as exc:  # noqa: BLE001
+        messages.error(request, f"Error al configurar el bracket: {exc}")
+
     return redirect("tournament:gestion")
