@@ -80,10 +80,22 @@ class Command(BaseCommand):
 
         dry_run: bool = options["dry_run"]
 
+        # Solo necesitamos los índices que aparecen en BRACKET_MAP (origen o
+        # destino) más los índices de las SF (para enlazar con la Final).
+        # Los partidos de fase de grupos tienen scheduled_at compartido con
+        # otros partidos, lo que hace que .get() falle con MultipleObjectsReturned.
+        relevant_indices = set(BRACKET_MAP.keys())
+        for dst_idx, _ in BRACKET_MAP.values():
+            relevant_indices.add(dst_idx)
+        # SF → Final
+        relevant_indices.update([100, 101])
+
         # Construir mapping: índice array → Match en BD
         idx_to_match: dict[int, Match] = {}
         skipped = 0
         for idx, entry in enumerate(data):
+            if idx not in relevant_indices:
+                continue
             scheduled_at = parse_datetime(entry["scheduled_at"])
             phase = entry["phase"]
             try:
