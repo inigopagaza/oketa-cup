@@ -181,6 +181,63 @@ msgstr "Y/m/d"
 msgid "Panel de administración"
 msgstr "Administrazio panela"
 
+msgid "Panel de gestión"
+msgstr "Kudeaketa panela"
+
+msgid "Herramientas de administración del torneo"
+msgstr "Txapelketaren administrazio-tresnak"
+
+msgid "Premios"
+msgstr "Sariak"
+
+msgid "Bracket R32"
+msgstr "R32 Bracket-a"
+
+msgid "Gestión de resultados"
+msgstr "Emaitzen kudeaketa"
+
+msgid "Premios individuales"
+msgstr "Banakako sariak"
+
+msgid "Asigna los equipos clasificados a cada partido de dieciseisavos. Los ganadores se propagarán automáticamente al cuadro de octavos."
+msgstr "Sailkatutako taldeak esleitu hamaseirekoetako partida bakoitzari. Garaileek automatikoki pasatuko dira zortzirenekoetara."
+
+msgid "Configurar bracket automáticamente"
+msgstr "Bracket-a automatikoki konfiguratu"
+
+msgid "¿Seguro? Resetea todas las relaciones del bracket."
+msgstr "Ziur? Bracket-eko erlazio guztiak berrezarriko dira."
+
+msgid "Sí, configurar"
+msgstr "Bai, konfiguratu"
+
+msgid "Cancelar"
+msgstr "Utzi"
+
+msgid "Local"
+msgstr "Bertakoa"
+
+msgid "Visitante"
+msgstr "Kanpokoa"
+
+msgid "Asignar"
+msgstr "Esleitu"
+
+msgid "Ganador a"
+msgstr "Garailea honetara"
+
+msgid "No hay partidos de dieciseisavos cargados."
+msgstr "Ez dago hamaseirekoetako partidarik kargatuta."
+
+msgid "Nombre del MVP..."
+msgstr "MVParen izena..."
+
+msgid "Nombre del Pichichi..."
+msgstr "Pichichiren izena..."
+
+msgid "Nombre del Zamora..."
+msgstr "Zamoraren izena..."
+
 msgid "Partidos pendientes de resultado"
 msgstr "Emaitzak sartzeko zain dauden partidak"
 

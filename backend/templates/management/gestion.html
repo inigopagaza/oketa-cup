@@ -151,7 +151,7 @@
           🏆 {% trans "MVP real del torneo" %}
         </label>
         <input type="text" name="real_mvp" value="{{ tournament_config.real_mvp }}"
-               placeholder="Nombre del MVP…"
+               placeholder="{% trans 'Nombre del MVP...' %}"
                class="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 mb-2">
         <p class="text-xs text-gray-500 mb-2">{% trans "Marca quién lo acertó:" %}</p>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
@@ -175,7 +175,7 @@
           ⚽ {% trans "Pichichi real (máximo goleador)" %}
         </label>
         <input type="text" name="real_top_scorer" value="{{ tournament_config.real_top_scorer }}"
-               placeholder="Nombre del Pichichi…"
+               placeholder="{% trans 'Nombre del Pichichi...' %}"
                class="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 mb-2">
         <p class="text-xs text-gray-500 mb-2">{% trans "Marca quién lo acertó:" %}</p>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
@@ -199,7 +199,7 @@
           🧤 {% trans "Zamora real (mejor portero)" %}
         </label>
         <input type="text" name="real_best_goalkeeper" value="{{ tournament_config.real_best_goalkeeper }}"
-               placeholder="Nombre del Zamora…"
+               placeholder="{% trans 'Nombre del Zamora...' %}"
                class="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 mb-2">
         <p class="text-xs text-gray-500 mb-2">{% trans "Marca quién lo acertó:" %}</p>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
