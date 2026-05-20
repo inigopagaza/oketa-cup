@@ -111,6 +111,63 @@ oketa-cup/
 
 ---
 
+### Arquitectura del cálculo de puntos
+
+**Principio fundamental: el saldo de cada usuario es siempre `SUM(ScoreLog)`, nunca un acumulador.**
+
+#### Flujo de cálculo — enfoque "bajo petición del admin"
+
+> **Decisión de diseño (2026-05-20):** en lugar de calcular automáticamente via
+> `post_save`, el cálculo se dispara manualmente desde el admin de Django.
+> Esto elimina la complejidad de detectar cuándo está completo un grupo y evita
+> cualquier problema de idempotencia con señales.
+
+```
+Admin actualiza resultados del día en la lista de Match
+    → pulsa la admin action "Recalcular puntuaciones"
+        → process_match_result(match) para cada partido seleccionado:
+            1. DELETE ScoreLog WHERE match=este_partido   ← idempotencia garantizada
+            2. Para cada equipo del partido:
+               - buscar todos los Participant que lo tienen seleccionado
+               - calcular puntos según resultado y fase
+               - INSERT ScoreLog(participant, match, team, reason, points)
+    → pulsa la admin action "Calcular clasificación de grupos"
+        → process_group_completion(group) para cada grupo de los partidos seleccionados:
+            1. DELETE ScoreLog de clasificación previos del grupo
+            2. Calcular tabla (pts, GD, GF) con todos los partidos del grupo
+            3. INSERT ScoreLog ADVANCE_GRP para 1º y 2º, TOP_GROUP para el 1º
+    3. Score visible = SELECT SUM(points) FROM ScoreLog WHERE participant=X
+```
+
+Si el admin corrige un resultado → edita el partido → vuelve a pulsar "Recalcular" → ScoreLog del partido se borra y recalcula. Sin pérdida, sin duplicados.
+
+#### Cuándo se calculan los puntos de grupo
+
+| Evento | Cuándo | Admin action |
+|---|---|---|
+| Victoria en grupos | Admin pulsa "Recalcular puntuaciones" | `Recalcular puntuaciones` |
+| Empate en grupos | Admin pulsa "Recalcular puntuaciones" | `Recalcular puntuaciones` |
+| Clasificar desde grupos | Admin pulsa "Calcular clasificación de grupos" | `Calcular clasificación de grupos` |
+| 1º de grupo | Admin pulsa "Calcular clasificación de grupos" | `Calcular clasificación de grupos` |
+| Clasificar a octavos | Admin pulsa "Recalcular puntuaciones" | `Recalcular puntuaciones` |
+| Clasificar a cuartos | Admin pulsa "Recalcular puntuaciones" | `Recalcular puntuaciones` |
+| Clasificar a semifinales | Admin pulsa "Recalcular puntuaciones" | `Recalcular puntuaciones` |
+| Clasificar a la final | Admin pulsa "Recalcular puntuaciones" | `Recalcular puntuaciones` |
+| Ganar el Mundial | Admin pulsa "Recalcular puntuaciones" | `Recalcular puntuaciones` |
+
+#### Estructura de ScoreLog
+
+```python
+class ScoreLog(Model):
+    participant  # FK → Participant
+    match        # FK → Match   ← clave para borrar/recalcular por partido
+    team         # FK → NationalTeam
+    reason       # CharField con los valores de la tabla anterior
+    points       # IntegerField
+```
+
+---
+
 ## Precios de selecciones
 
 **Grupo A:** México (36), Sudáfrica (23), Corea del Sur (41), Chequia (22)
@@ -164,15 +221,22 @@ Objetivo: poder cargar el calendario completo y tener la base para la puntuació
 - [x] `apps.py` con `ready()` que importa signals
 - [x] Motor de puntuación (`apps/pool/services/scoring.py`) — 15/15 tests pasan
 - [x] Commit: `feat(tournament): add venue field, knockout phases, signals and load_fixtures` (771f5f1)
+- [x] Commit: `feat(pool): connect post_save signal and fix idempotent scoring (DELETE+INSERT)` (8f3761e)
 
 ### 🔴 FASE 1B — Admin y lógica de selección *(en curso)*
 
-Objetivo: poder entrar resultados desde el admin y calcular puntuación automáticamente.
+Objetivo: poder entrar resultados desde el admin y calcular puntuación bajo petición.
 
-- [ ] `createsuperuser` + servidor arrancado por primera vez
-- [ ] Django Admin: señal `post_save` en `Match` → dispara `process_match_result`
-- [ ] Lógica de selección: validar presupuesto ≤ 220, bloquear tras confirmar
-- [ ] Tests pytest: modelos y vistas (cobertura > 70%)
+- [x] `scoring.py`: idempotencia real — DELETE + INSERT al recalcular (soporta corrección de resultados)
+- [x] `scoring.py`: `process_group_completion(group)` — calcula clasificación cuando todos los partidos del grupo terminan
+- [x] `admin.py`: `MatchAdmin` con `list_editable` para `home_score`, `away_score`, `is_finished`
+- [x] **Decisión: cálculo bajo petición** — admin actions en lugar de `post_save` automático
+- [ ] `signals.py`: eliminar `on_match_saved` (cálculo ya no es automático)
+- [ ] `admin.py`: action "Recalcular puntuaciones" → `process_match_result` por partido
+- [ ] `admin.py`: action "Calcular clasificación de grupos" → `process_group_completion` por grupo
+- [ ] `createsuperuser` + verificar flujo completo en admin
+- [ ] Lógica de selección de equipos: `Participant` elige equipos, valida presupuesto ≤ 220, bloquea tras confirmar
+- [ ] Tests pytest (cobertura > 70%)
 
 ### 🟡 FASE 2 — Frontend: Django Templates *(después del backend)*
 
