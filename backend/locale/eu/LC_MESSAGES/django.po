@@ -186,3 +186,36 @@ msgstr "Amaitutako partida guztien puntuak birkalkulatzen ditu (eragiketa idempo
 
 msgid "Recalcular puntuaciones"
 msgstr "Puntuazioak birkalkultatu"
+
+msgid "Corregir resultados finalizados"
+msgstr "Amaitutako emaitzak zuzendu"
+
+msgid "Filtrar"
+msgstr "Iragazi"
+
+msgid "No hay partidos finalizados en esa fecha."
+msgstr "Ez dago amaitutako partidarik data horretan."
+
+msgid "Corregir"
+msgstr "Zuzendu"
+
+msgid "Premios individuales (MVP, Pichichi, Zamora)"
+msgstr "Banakako sariak (MVP, Pichichi, Zamora)"
+
+msgid "MVP real del torneo"
+msgstr "Txapelketako MVP erreala"
+
+msgid "Pichichi real (máximo goleador)"
+msgstr "Pichichi erreala (goleatzaile nagusia)"
+
+msgid "Zamora real (mejor portero)"
+msgstr "Zamora erreala (atezain onena)"
+
+msgid "Marca quién lo acertó:"
+msgstr "Markatu nork asmatu zuen:"
+
+msgid "No hay participantes."
+msgstr "Ez dago parte-hartzailerik."
+
+msgid "Adjudicar premios"
+msgstr "Sariak esleitu"

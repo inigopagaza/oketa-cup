@@ -28,7 +28,8 @@ def dashboard(request: HttpRequest) -> HttpResponse:
     ranking = sorted(
         Participant.objects.select_related("user")
         .prefetch_related("teams")
-        .filter(user__is_staff=False),
+        .filter(user__is_staff=False)
+        .distinct(),
         key=lambda p: p.total_points,
         reverse=True,
     )
@@ -55,9 +56,15 @@ def dashboard(request: HttpRequest) -> HttpResponse:
         for team in participant.teams.all()
     ]
 
-    # Partidos pendientes de resultado (para el panel de admin)
+    # Partidos pendientes de resultado y partidos finalizados (para el panel de admin)
     pending_matches = None
+    finished_matches = None
+    finished_matches_date = None
+    tournament_config = None
+    prize_participants = None
     if request.user.is_staff:
+        import datetime
+
         from django.utils import timezone as _tz
 
         pending_matches = (
@@ -65,6 +72,48 @@ def dashboard(request: HttpRequest) -> HttpResponse:
             .select_related("home_team", "away_team")
             .order_by("scheduled_at")
         )
+        today = _tz.now().date()
+        fecha_str = request.GET.get("fecha", str(today))
+        try:
+            finished_matches_date = datetime.date.fromisoformat(fecha_str)
+        except ValueError:
+            finished_matches_date = today
+        finished_matches = (
+            Match.objects.filter(
+                is_finished=True, scheduled_at__date=finished_matches_date
+            )
+            .select_related("home_team", "away_team")
+            .order_by("scheduled_at")
+        )
+
+        # Datos para adjudicación de premios individuales
+        from apps.tournament.views import (
+            _REASON_GOALKEEPER,
+            _REASON_MVP,
+            _REASON_TOP_SCORER,
+        )
+
+        from .models import ScoreLog
+
+        tournament_config = TournamentConfig.get()
+        prize_participants = []
+        for p in Participant.objects.filter(user__is_staff=False).select_related(
+            "user"
+        ):  # pyright: ignore[reportAttributeAccessIssue]
+            prize_participants.append(
+                {
+                    "participant": p,
+                    "mvp_correct": ScoreLog.objects.filter(
+                        participant=p, match=None, reason=_REASON_MVP
+                    ).exists(),  # pyright: ignore[reportAttributeAccessIssue]
+                    "top_scorer_correct": ScoreLog.objects.filter(
+                        participant=p, match=None, reason=_REASON_TOP_SCORER
+                    ).exists(),  # pyright: ignore[reportAttributeAccessIssue]
+                    "goalkeeper_correct": ScoreLog.objects.filter(
+                        participant=p, match=None, reason=_REASON_GOALKEEPER
+                    ).exists(),  # pyright: ignore[reportAttributeAccessIssue]
+                }
+            )
 
     return render(
         request,
@@ -75,6 +124,10 @@ def dashboard(request: HttpRequest) -> HttpResponse:
             "todays_matches": todays_matches,
             "team_scores": team_scores,
             "pending_matches": pending_matches,
+            "finished_matches": finished_matches,
+            "finished_matches_date": finished_matches_date,
+            "tournament_config": tournament_config if request.user.is_staff else None,
+            "prize_participants": prize_participants if request.user.is_staff else None,
         },
     )
 

@@ -330,6 +330,62 @@ Objetivo: el usuario `admin` gestiona resultados y recálculo de puntos directam
 - [x] `tournament/urls.py`: rutas `tournament/admin/resultado/<id>/` y `tournament/admin/recalcular/`
 - [x] `locale/eu/LC_MESSAGES/django.po`: traducciones del panel admin al Euskara
 
+### ✅ FASE 2C-fix — Correcciones al panel de administración *(2026-05-20)*
+
+Objetivo: corregir bugs detectados durante la simulación del primer día de partidos.
+
+**Bugs encontrados y solucionados:**
+
+- [x] **Duplicados en clasificación** — `Participant.Meta.ordering = ["-score_logs__points_earned"]` hacía un JOIN SQL con la tabla `score_logs` que devolvía N filas por participante (una por cada ScoreLog). El `sorted()` en Python los mostraba todos, apareciendo el mismo usuario múltiples veces.
+  - Solución: eliminado el `ordering` problemático del `Meta`; añadido `.distinct()` al queryset de ranking en `pool/views.dashboard`
+
+- [x] **Sin opción de corregir resultados finalizados** — El filtro `is_finished=False` hacía que los partidos ya cerrados desaparecieran del panel sin posibilidad de corrección.
+  - Solución: nueva sección "Corregir resultados finalizados" (borde verde) en el panel naranja, con formulario idéntico al de introducir resultados pero con el checkbox "Finalizado" pre-marcado. Al guardar, `process_match_result` borra los ScoreLogs previos del partido (idempotencia ya implementada) y los recrea con el resultado corregido.
+  - `pool/views.dashboard`: añadido `finished_matches` al contexto (partidos `is_finished=True`, ordenados por fecha descendente)
+  - `locale/eu/LC_MESSAGES/django.po`: añadidas traducciones de "Corregir resultados finalizados" y "Corregir"
+
+---
+
+---
+
+### ✅ FASE 2E — Adjudicación manual de premios individuales *(2026-05-20)*
+
+Objetivo: permitir al admin adjudicar los puntos de MVP, Pichichi y Zamora al final del torneo, de forma manual para gestionar errores ortográficos en las predicciones.
+
+**Motivación:** la función `award_individual_prizes()` existente hacía matching exacto de strings, lo que implicaba que cualquier falta de ortografía o variación en la escritura del nombre dejaba sin puntos al participante. El admin necesita decidir quién acertó independientemente de cómo lo escribió.
+
+**Cambios implementados:**
+
+- [x] **`tournament/views.py`** — nueva vista `admin_award_prizes` (POST):
+  - Lee `real_mvp`, `real_top_scorer` y `real_best_goalkeeper` del formulario y los guarda en `TournamentConfig`
+  - Para cada premio: borra los `ScoreLog` previos con `match=None` y la razón correspondiente (idempotencia total)
+  - Crea nuevos `ScoreLog` para los participantes marcados con checkboxes por el admin
+  - Exporta constantes `_REASON_MVP`, `_REASON_TOP_SCORER`, `_REASON_GOALKEEPER` para reutilización en `pool/views.py`
+  - Puntos: MVP=20, Pichichi=10, Zamora=5 (de `scoring.py`)
+
+- [x] **`tournament/urls.py`** — nueva ruta `admin/premios/` → `admin_award_prizes`, name=`admin_award_prizes`
+
+- [x] **`pool/views.dashboard`** — añadidos al contexto (solo si `is_staff`):
+  - `tournament_config`: objeto `TournamentConfig` con los nombres reales guardados previamente
+  - `prize_participants`: lista de dicts con cada participante y booleanos `mvp_correct`, `top_scorer_correct`, `goalkeeper_correct` (según ScoreLogs existentes)
+
+- [x] **`templates/pool/dashboard.html`** — nueva sección "Premios individuales" en el panel naranja (antes del botón Recalcular):
+  - 3 bloques (MVP / Pichichi / Zamora): input texto para el ganador real + lista de participantes con checkboxes
+  - Muestra en cada checkbox: username + predicción del participante entre paréntesis
+  - Los participantes ya adjudicados aparecen pre-marcados y con texto verde
+  - Botón "Adjudicar premios" → POST a `tournament:admin_award_prizes`
+
+- [x] **`locale/eu/LC_MESSAGES/django.po`** — traducciones al euskera de todos los strings nuevos compiladas en `.mo`
+
+**Funcionamiento:**
+1. Admin abre el dashboard, ve la sección "Premios individuales"
+2. Escribe el nombre real del MVP/Pichichi/Zamora (o lo deja si ya lo había guardado antes)
+3. Marca manualmente quién lo acertó (puede ser 0, 1 o varios participantes)
+4. Pulsa "Adjudicar premios" → se eliminan adjudicaciones previas y se crean las nuevas
+5. Los puntos aparecen en el ranking inmediatamente
+
+---
+
 ### ✅ FASE 2D — Configuración de tipo estático (Pylance/Pyright) *(2026-05-20)*
 
 Objetivo: eliminar falsos positivos del linter en VS Code sin comprometer el código.

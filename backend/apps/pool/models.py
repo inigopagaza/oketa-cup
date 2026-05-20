@@ -50,7 +50,6 @@ class Participant(models.Model):
     class Meta:
         verbose_name = "Participante"
         verbose_name_plural = "Participantes"
-        ordering = ["-score_logs__points_earned"]  # Se ordenará por puntos totales
 
     def __str__(self) -> str:
         return str(self.user)
