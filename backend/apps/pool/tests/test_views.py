@@ -137,7 +137,12 @@ class TestConfirmSelectionView:
         client.force_login(user_bob)
         resp = client.post(
             reverse(self.URL),
-            {"teams": [str(team_cheap.id)]},
+            {
+                "teams": [str(team_cheap.id)],
+                "predicted_mvp": "Messi",
+                "predicted_top_scorer": "Mbappé",
+                "predicted_best_goalkeeper": "Courtois",
+            },
         )
         assert resp.status_code == 302
         assert reverse("pool:dashboard") in resp["Location"]
