@@ -68,8 +68,10 @@ def admin_set_result(request: HttpRequest, match_id: int) -> HttpResponse:
     if fecha_retorno:
         from django.urls import reverse
 
-        return redirect(f"{reverse('pool:dashboard')}?fecha={fecha_retorno}#corregir")
-    return redirect("pool:dashboard")
+        return redirect(
+            f"{reverse('tournament:gestion')}?fecha={fecha_retorno}#corregir"
+        )
+    return redirect("tournament:gestion")
 
 
 @login_required
@@ -82,7 +84,7 @@ def admin_recalculate(request: HttpRequest) -> HttpResponse:
     for match in Match.objects.filter(is_finished=True):  # pyright: ignore[reportAttributeAccessIssue]
         process_match_result(match)
 
-    return redirect("pool:dashboard")
+    return redirect("tournament:gestion")
 
 
 # Razones fijas de ScoreLogs de premios individuales (para identificarlos en idempotencia)
@@ -139,4 +141,101 @@ def admin_award_prizes(request: HttpRequest) -> HttpResponse:
                 reason=reason,
             )
 
-    return redirect("pool:dashboard")
+    return redirect("tournament:gestion")
+
+
+@login_required
+def gestion(request: HttpRequest) -> HttpResponse:
+    """Panel de gestión del torneo. Solo para staff."""
+    if not request.user.is_staff:
+        return redirect("pool:dashboard")
+
+    import datetime
+
+    from django.utils import timezone
+
+    from apps.pool.models import Participant, ScoreLog
+
+    pending_matches = (
+        Match.objects.filter(is_finished=False, scheduled_at__lte=timezone.now())
+        .select_related("home_team", "away_team")
+        .order_by("scheduled_at")
+    )
+
+    fecha_str = request.GET.get("fecha", str(timezone.now().date()))
+    try:
+        finished_matches_date = datetime.date.fromisoformat(fecha_str)
+    except ValueError:
+        finished_matches_date = timezone.now().date()
+
+    finished_matches = (
+        Match.objects.filter(is_finished=True, scheduled_at__date=finished_matches_date)
+        .select_related("home_team", "away_team")
+        .order_by("scheduled_at")
+    )
+
+    tournament_config = TournamentConfig.get()
+
+    prize_participants = []
+    for p in Participant.objects.filter(user__is_staff=False).select_related("user"):  # pyright: ignore[reportAttributeAccessIssue]
+        prize_participants.append(
+            {
+                "participant": p,
+                "mvp_correct": ScoreLog.objects.filter(  # pyright: ignore[reportAttributeAccessIssue]
+                    participant=p, match=None, reason=_REASON_MVP
+                ).exists(),
+                "top_scorer_correct": ScoreLog.objects.filter(  # pyright: ignore[reportAttributeAccessIssue]
+                    participant=p, match=None, reason=_REASON_TOP_SCORER
+                ).exists(),
+                "goalkeeper_correct": ScoreLog.objects.filter(  # pyright: ignore[reportAttributeAccessIssue]
+                    participant=p, match=None, reason=_REASON_GOALKEEPER
+                ).exists(),
+            }
+        )
+
+    r32_matches = (
+        Match.objects.filter(phase=Match.Phase.ROUND_OF_32)  # pyright: ignore[reportAttributeAccessIssue]
+        .select_related("home_team", "away_team", "next_match")
+        .order_by("scheduled_at")
+    )
+
+    from apps.tournament.models import NationalTeam
+
+    all_teams = NationalTeam.objects.order_by("group", "name")
+
+    return render(
+        request,
+        "management/gestion.html",
+        {
+            "pending_matches": pending_matches,
+            "finished_matches": finished_matches,
+            "finished_matches_date": finished_matches_date,
+            "tournament_config": tournament_config,
+            "prize_participants": prize_participants,
+            "r32_matches": r32_matches,
+            "all_teams": all_teams,
+        },
+    )
+
+
+@login_required
+@require_POST
+def gestion_set_r32_teams(request: HttpRequest, match_id: int) -> HttpResponse:
+    """Asigna equipos a un partido de dieciseisavos (R32). Solo para staff."""
+    if not request.user.is_staff:
+        return redirect("pool:dashboard")
+
+    match = get_object_or_404(Match, id=match_id, phase=Match.Phase.ROUND_OF_32)
+
+    from apps.tournament.models import NationalTeam
+
+    home_id = request.POST.get("home_team_id", "").strip()
+    away_id = request.POST.get("away_team_id", "").strip()
+
+    if home_id.isdigit():
+        match.home_team = NationalTeam.objects.filter(id=int(home_id)).first()
+    if away_id.isdigit():
+        match.away_team = NationalTeam.objects.filter(id=int(away_id)).first()
+
+    match.save(update_fields=["home_team", "away_team"])
+    return redirect("tournament:gestion")

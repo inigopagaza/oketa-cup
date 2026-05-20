@@ -408,7 +408,91 @@ no pueden inferir sin ayuda.
 
 **Nota:** `django-stubs` está diseñado para mypy (usa `mypy_django_plugin`). Pyright/Pylance no soporta plugins de mypy, por lo que algunos atributos dinámicos de Django siempre requerirán supresión manual o `pyrightconfig.json`.
 
-### 🟢 FASE 3 — API REST *(post-lanzamiento)*
+### � FASE 3A — Panel de gestión separado *(próxima)*
+
+Objetivo: sacar la gestión de administración del dashboard de usuario a una URL dedicada, dejando el dashboard limpio para participantes y el panel exclusivo para staff.
+
+**Motivación:** el dashboard estaba mezclando dos responsabilidades distintas — la vista de participante (ranking, puntos, equipos) y la gestión de admin (resultados, premios, bracket). Con el Mundial en marcha, el panel crecerá más y necesita su propio espacio.
+
+**Decisión de diseño:**
+
+| Rol | Pantalla |
+|-----|---------|
+| Participante | `/` → dashboard: ranking, mis puntos, mis equipos, partidos del día |
+| Staff | `/gestion/` → panel de gestión: resultados, premios, bracket |
+
+**Implementación prevista:**
+
+- [ ] Nueva app `management` (o nueva sección en `tournament`) con URL base `/gestion/`
+- [ ] `GestionView` (staff-only, `login_required + is_staff`): resumen del estado del torneo
+- [ ] `/gestion/partidos/` — entrada y corrección de resultados por fase
+- [ ] `/gestion/premios/` — adjudicación de MVP, Pichichi, Zamora
+- [ ] Migrar el panel naranja del `dashboard.html` a los templates de gestión
+- [ ] Navbar: botón "Panel de gestión" visible solo para `is_staff`
+- [ ] Traducciones es/eu para todos los strings nuevos
+
+---
+
+### 🔲 FASE 3B — Configuración manual de dieciseisavos *(próxima)*
+
+Objetivo: permitir al admin introducir los 16 cruces de dieciseisavos una vez la FIFA los oficializa, sin necesitar lógica de desempate en el sistema.
+
+**Decisión de diseño — por qué manual:**
+
+El Mundial 2026 tiene 12 grupos con 4 equipos cada uno. Ascienden:
+- Los 2 primeros de cada grupo (24 equipos)
+- Los 8 mejores terceros (de 12 grupos posibles)
+
+La posición de los 8 mejores terceros en el cuadro depende de **qué grupos** provengan, según una tabla predefinida por la FIFA. El desempate entre terceros con los mismos puntos usa diferencia de goles, goles a favor, tarjetas y fair play — ninguno de esos datos se trackea en este sistema. Por tanto, **la generación automática del cuadro de dieciseisavos no es viable** sin replicar toda la lógica FIFA.
+
+**Solución: admin introduce los 16 cruces manualmente** una sola vez, cuando la FIFA los publica (tras terminar todos los grupos).
+
+**Implementación prevista:**
+
+- [ ] `/gestion/eliminatorias/` — vista con el estado del cuadro por rondas
+- [ ] Formulario en `/gestion/eliminatorias/dieciseisavos/` para asignar `home_team` y `away_team` a cada uno de los 16 partidos de fase `R32` ya existentes en BD
+- [ ] Los 16 slots de `R32` ya existen en `fixtures.json` con `team_home=null`, `team_away=null`
+- [ ] Validación: solo permite asignar equipos que hayan completado la fase de grupos
+- [ ] Traducciones es/eu
+
+---
+
+### 🔲 FASE 3C — Propagación automática de ganadores *(próxima)*
+
+Objetivo: a partir de octavos de final, cuando el admin introduce un resultado, el ganador se propaga automáticamente al partido siguiente del cuadro sin intervención manual.
+
+**Decisión de diseño:**
+
+| Ronda | Configuración de enfrentamientos |
+|-------|----------------------------------|
+| Grupos | Precargados en `fixtures.json` ✅ |
+| Dieciseisavos (R32) | Admin manual (Fase 3B) |
+| Octavos (R16) en adelante | **Automático** via signal |
+
+**Cómo funciona:**
+
+Los slots de octavos, cuartos, semis y final ya existen en BD con `team_home=null` y `team_away=null`. Cada partido de R32 tiene un `next_match_id` implícito según la estructura del cuadro (slot fijo del bracket del Mundial 2026). Al registrar el resultado de un partido:
+
+```
+Admin guarda resultado partido R32 (is_finished=True)
+    → signal post_save en Match detecta la ronda
+        → determina el next_match según tabla de bracket hardcodeada
+        → actualiza next_match.home_team o away_team con el ganador
+    → el cuadro se actualiza automáticamente para todos los participantes
+```
+
+**Implementación prevista:**
+
+- [ ] Tabla de bracket en `tournament/bracket.py` — mapping `match_id → (next_match_id, slot)` para las fases R32 → R16 → QF → SF → F
+- [ ] Signal `on_knockout_result_saved` en `signals.py`: detecta partidos `is_finished=True` con fase R32+, llama a `advance_winner_in_bracket(match)`
+- [ ] `advance_winner_in_bracket(match)` en `scoring.py` o `bracket.py`: determina ganador (no hay empates en eliminatorias) y actualiza el slot en el siguiente partido
+- [ ] Vista `/gestion/eliminatorias/` muestra el cuadro completo con el estado actual
+- [ ] Tests: propagación correcta en cada ronda, idempotencia al sobrescribir resultado
+- [ ] Traducciones es/eu
+
+---
+
+### �🟢 FASE 3D — API REST *(post-lanzamiento)*
 
 Objetivo: exponer todos los datos vía API para consumir desde React.
 

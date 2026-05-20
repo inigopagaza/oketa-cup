@@ -15,4 +15,10 @@ urlpatterns = [
     ),
     path("admin/recalcular/", views.admin_recalculate, name="admin_recalculate"),
     path("admin/premios/", views.admin_award_prizes, name="admin_award_prizes"),
+    path("gestion/", views.gestion, name="gestion"),
+    path(
+        "gestion/dieciseisavos/<int:match_id>/",
+        views.gestion_set_r32_teams,
+        name="gestion_set_r32_teams",
+    ),
 ]

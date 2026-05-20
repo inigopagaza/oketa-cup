@@ -1,0 +1,293 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Panel de gestión" %} · OketaCup{% endblock %}
+
+{% block content %}
+<div class="space-y-8">
+
+  <div>
+    <h1 class="text-2xl font-bold">⚙️ {% trans "Panel de gestión" %}</h1>
+    <p class="text-gray-500 dark:text-gray-400 text-sm mt-1">{% trans "Herramientas de administración del torneo" %}</p>
+  </div>
+
+  <!-- Tabs de navegación -->
+  <div class="flex gap-2 border-b border-gray-200 dark:border-gray-700" x-data="{ tab: window.location.hash || '#resultados' }">
+    <a href="#resultados" @click="tab='#resultados'"
+       :class="tab === '#resultados' ? 'border-orange-500 text-orange-600 dark:text-orange-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'"
+       class="px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors">
+      ⏱ {% trans "Resultados" %}
+    </a>
+    <a href="#premios" @click="tab='#premios'"
+       :class="tab === '#premios' ? 'border-orange-500 text-orange-600 dark:text-orange-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'"
+       class="px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors">
+      🏅 {% trans "Premios" %}
+    </a>
+    <a href="#bracket" @click="tab='#bracket'"
+       :class="tab === '#bracket' ? 'border-orange-500 text-orange-600 dark:text-orange-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'"
+       class="px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors">
+      🏆 {% trans "Bracket R32" %}
+    </a>
+  </div>
+
+  <!-- ── SECCIÓN: Resultados ── -->
+  <div id="resultados" class="card p-5 space-y-6">
+    <h2 class="font-bold text-lg text-orange-700 dark:text-orange-400">⏱ {% trans "Gestión de resultados" %}</h2>
+
+    <!-- Partidos pendientes -->
+    <div>
+      <h3 class="font-semibold text-sm text-orange-600 dark:text-orange-300 mb-3">{% trans "Partidos pendientes de resultado" %}</h3>
+      {% if pending_matches %}
+        <div class="space-y-3">
+          {% for match in pending_matches %}
+          <form action="{% url 'tournament:admin_set_result' match.id %}" method="post"
+                class="flex flex-wrap items-center gap-2 bg-white dark:bg-gray-800 rounded-lg px-4 py-3 text-sm shadow-sm border border-gray-100 dark:border-gray-700">
+            {% csrf_token %}
+            <span class="flex-1 min-w-0 font-medium truncate">
+              {% if match.home_team %}{{ match.home_team.flag_emoji }} {{ match.home_team.name }}{% else %}TBD{% endif %}
+              <span class="text-gray-400 mx-1">vs</span>
+              {% if match.away_team %}{{ match.away_team.flag_emoji }} {{ match.away_team.name }}{% else %}TBD{% endif %}
+            </span>
+            <span class="text-xs text-gray-400 whitespace-nowrap">{{ match.scheduled_at|date:"d/m H:i" }}</span>
+            <span class="text-xs text-gray-400 whitespace-nowrap">[{{ match.get_phase_display }}]</span>
+            <input type="number" name="home_score" min="0" max="99" placeholder="0"
+                   value="{% if match.home_score is not None %}{{ match.home_score }}{% endif %}"
+                   class="w-14 text-center border border-gray-300 dark:border-gray-600 rounded-md px-2 py-1 bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-400" required>
+            <span class="text-gray-400 font-bold">–</span>
+            <input type="number" name="away_score" min="0" max="99" placeholder="0"
+                   value="{% if match.away_score is not None %}{{ match.away_score }}{% endif %}"
+                   class="w-14 text-center border border-gray-300 dark:border-gray-600 rounded-md px-2 py-1 bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-400" required>
+            <label class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 cursor-pointer select-none">
+              <input type="checkbox" name="is_finished" value="1" class="rounded accent-orange-500">
+              {% trans "Finalizado" %}
+            </label>
+            <button type="submit"
+                    class="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-xs font-semibold rounded-lg transition-colors">
+              {% trans "Guardar" %}
+            </button>
+          </form>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="text-sm text-gray-400">{% trans "No hay partidos pasados pendientes de resultado." %}</p>
+      {% endif %}
+    </div>
+
+    <!-- Corregir resultados finalizados -->
+    <div class="border-t border-gray-100 dark:border-gray-700 pt-4">
+      <div class="flex items-center gap-3 mb-3" id="corregir">
+        <h3 class="font-semibold text-sm text-orange-600 dark:text-orange-300">{% trans "Corregir resultados finalizados" %}</h3>
+        <form method="get" action="{% url 'tournament:gestion' %}#corregir" class="flex items-center gap-2 ml-auto">
+          <input type="date" name="fecha"
+                 value="{{ finished_matches_date|date:'Y-m-d' }}"
+                 class="text-xs border border-gray-300 dark:border-gray-600 rounded-md px-2 py-1 bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-400">
+          <button type="submit"
+                  class="px-2 py-1 bg-orange-500 hover:bg-orange-600 text-white text-xs font-semibold rounded-md transition-colors">
+            {% trans "Filtrar" %}
+          </button>
+        </form>
+      </div>
+      {% if finished_matches %}
+      <div class="space-y-3">
+        {% for match in finished_matches %}
+        <form action="{% url 'tournament:admin_set_result' match.id %}" method="post"
+              class="flex flex-wrap items-center gap-2 bg-white dark:bg-gray-800 rounded-lg px-4 py-3 text-sm shadow-sm border border-green-200 dark:border-green-800">
+          {% csrf_token %}
+          <input type="hidden" name="fecha_retorno" value="{{ finished_matches_date|date:'Y-m-d' }}">
+          <span class="flex-1 min-w-0 font-medium truncate">
+            {% if match.home_team %}{{ match.home_team.flag_emoji }} {{ match.home_team.name }}{% else %}TBD{% endif %}
+            <span class="text-gray-400 mx-1">vs</span>
+            {% if match.away_team %}{{ match.away_team.flag_emoji }} {{ match.away_team.name }}{% else %}TBD{% endif %}
+          </span>
+          <span class="text-xs text-gray-400 whitespace-nowrap">{{ match.scheduled_at|date:"d/m H:i" }}</span>
+          <input type="number" name="home_score" min="0" max="99" placeholder="0"
+                 value="{{ match.home_score }}"
+                 class="w-14 text-center border border-gray-300 dark:border-gray-600 rounded-md px-2 py-1 bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-400" required>
+          <span class="text-gray-400 font-bold">–</span>
+          <input type="number" name="away_score" min="0" max="99" placeholder="0"
+                 value="{{ match.away_score }}"
+                 class="w-14 text-center border border-gray-300 dark:border-gray-600 rounded-md px-2 py-1 bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-400" required>
+          <label class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 cursor-pointer select-none">
+            <input type="checkbox" name="is_finished" value="1" class="rounded accent-orange-500" checked>
+            {% trans "Finalizado" %}
+          </label>
+          <button type="submit"
+                  class="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-xs font-semibold rounded-lg transition-colors">
+            {% trans "Corregir" %}
+          </button>
+        </form>
+        {% endfor %}
+      </div>
+      {% else %}
+        <p class="text-sm text-gray-400">{% trans "No hay partidos finalizados en esa fecha." %}</p>
+      {% endif %}
+    </div>
+
+    <!-- Recalcular -->
+    <div class="border-t border-gray-100 dark:border-gray-700 pt-4">
+      <form action="{% url 'tournament:admin_recalculate' %}" method="post" class="flex items-center gap-3">
+        {% csrf_token %}
+        <p class="text-sm text-gray-600 dark:text-gray-400 flex-1">
+          {% trans "Recalcula los puntos de todos los partidos finalizados (operación idempotente)." %}
+        </p>
+        <button type="submit"
+                class="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-lg transition-colors whitespace-nowrap">
+          🔄 {% trans "Recalcular puntuaciones" %}
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ── SECCIÓN: Premios ── -->
+  <div id="premios" class="card p-5 space-y-5">
+    <h2 class="font-bold text-lg text-orange-700 dark:text-orange-400">🏅 {% trans "Premios individuales" %}</h2>
+
+    <form action="{% url 'tournament:admin_award_prizes' %}" method="post" class="space-y-5">
+      {% csrf_token %}
+      {% with prizes_data=prize_participants %}
+
+      {# ── MVP ── #}
+      <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          🏆 {% trans "MVP real del torneo" %}
+        </label>
+        <input type="text" name="real_mvp" value="{{ tournament_config.real_mvp }}"
+               placeholder="Nombre del MVP…"
+               class="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 mb-2">
+        <p class="text-xs text-gray-500 mb-2">{% trans "Marca quién lo acertó:" %}</p>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+          {% for entry in prizes_data %}
+          <label class="flex items-center gap-2 text-sm cursor-pointer {% if entry.mvp_correct %}text-green-700 dark:text-green-400 font-medium{% else %}text-gray-600 dark:text-gray-400{% endif %}">
+            <input type="checkbox" name="winner_mvp" value="{{ entry.participant.id }}"
+                   {% if entry.mvp_correct %}checked{% endif %}
+                   class="rounded border-gray-300 text-orange-500 focus:ring-orange-400">
+            <span>{{ entry.participant.user.username }}</span>
+            <span class="text-gray-400 italic truncate">({{ entry.participant.predicted_mvp|default:"—" }})</span>
+          </label>
+          {% empty %}
+            <p class="text-xs text-gray-400 col-span-2">{% trans "No hay participantes." %}</p>
+          {% endfor %}
+        </div>
+      </div>
+
+      {# ── Pichichi ── #}
+      <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          ⚽ {% trans "Pichichi real (máximo goleador)" %}
+        </label>
+        <input type="text" name="real_top_scorer" value="{{ tournament_config.real_top_scorer }}"
+               placeholder="Nombre del Pichichi…"
+               class="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 mb-2">
+        <p class="text-xs text-gray-500 mb-2">{% trans "Marca quién lo acertó:" %}</p>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+          {% for entry in prizes_data %}
+          <label class="flex items-center gap-2 text-sm cursor-pointer {% if entry.top_scorer_correct %}text-green-700 dark:text-green-400 font-medium{% else %}text-gray-600 dark:text-gray-400{% endif %}">
+            <input type="checkbox" name="winner_top_scorer" value="{{ entry.participant.id }}"
+                   {% if entry.top_scorer_correct %}checked{% endif %}
+                   class="rounded border-gray-300 text-orange-500 focus:ring-orange-400">
+            <span>{{ entry.participant.user.username }}</span>
+            <span class="text-gray-400 italic truncate">({{ entry.participant.predicted_top_scorer|default:"—" }})</span>
+          </label>
+          {% empty %}
+            <p class="text-xs text-gray-400 col-span-2">{% trans "No hay participantes." %}</p>
+          {% endfor %}
+        </div>
+      </div>
+
+      {# ── Zamora ── #}
+      <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          🧤 {% trans "Zamora real (mejor portero)" %}
+        </label>
+        <input type="text" name="real_best_goalkeeper" value="{{ tournament_config.real_best_goalkeeper }}"
+               placeholder="Nombre del Zamora…"
+               class="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 mb-2">
+        <p class="text-xs text-gray-500 mb-2">{% trans "Marca quién lo acertó:" %}</p>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+          {% for entry in prizes_data %}
+          <label class="flex items-center gap-2 text-sm cursor-pointer {% if entry.goalkeeper_correct %}text-green-700 dark:text-green-400 font-medium{% else %}text-gray-600 dark:text-gray-400{% endif %}">
+            <input type="checkbox" name="winner_best_goalkeeper" value="{{ entry.participant.id }}"
+                   {% if entry.goalkeeper_correct %}checked{% endif %}
+                   class="rounded border-gray-300 text-orange-500 focus:ring-orange-400">
+            <span>{{ entry.participant.user.username }}</span>
+            <span class="text-gray-400 italic truncate">({{ entry.participant.predicted_best_goalkeeper|default:"—" }})</span>
+          </label>
+          {% empty %}
+            <p class="text-xs text-gray-400 col-span-2">{% trans "No hay participantes." %}</p>
+          {% endfor %}
+        </div>
+      </div>
+
+      {% endwith %}
+
+      <button type="submit"
+              class="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-lg transition-colors">
+        🏅 {% trans "Adjudicar premios" %}
+      </button>
+    </form>
+  </div>
+
+  <!-- ── SECCIÓN: Bracket R32 ── -->
+  <div id="bracket" class="card p-5 space-y-4">
+    <h2 class="font-bold text-lg text-orange-700 dark:text-orange-400">🏆 {% trans "Dieciseisavos de final" %}</h2>
+    <p class="text-sm text-gray-500 dark:text-gray-400">
+      {% trans "Asigna los equipos clasificados a cada partido de dieciseisavos. Los ganadores se propagarán automáticamente al cuadro de octavos." %}
+    </p>
+
+    <div class="space-y-3">
+      {% for match in r32_matches %}
+      <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 px-4 py-3 text-sm shadow-sm">
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="text-xs text-gray-400 whitespace-nowrap w-24">{{ match.scheduled_at|date:"d/m H:i" }}</span>
+          <span class="flex-1 text-xs text-gray-500 truncate italic">{{ match.match_label }}</span>
+          {% if match.is_finished %}
+            <span class="font-bold tabular-nums text-green-600 dark:text-green-400">
+              {% if match.home_team %}{{ match.home_team.flag_emoji }} {{ match.home_team.name }}{% else %}TBD{% endif %}
+              {{ match.home_score }}–{{ match.away_score }}
+              {% if match.away_team %}{{ match.away_team.name }} {{ match.away_team.flag_emoji }}{% else %}TBD{% endif %}
+            </span>
+            <span class="text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-2 py-0.5 rounded-full">✓ {% trans "Finalizado" %}</span>
+          {% else %}
+            <form action="{% url 'tournament:gestion_set_r32_teams' match.id %}" method="post"
+                  class="flex flex-wrap items-center gap-2">
+              {% csrf_token %}
+              <select name="home_team_id"
+                      class="text-sm border border-gray-300 dark:border-gray-600 rounded-md px-2 py-1 bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-400">
+                <option value="">— {% trans "Local" %} —</option>
+                {% for team in all_teams %}
+                <option value="{{ team.id }}" {% if match.home_team_id == team.id %}selected{% endif %}>
+                  {{ team.flag_emoji }} {{ team.name }} ({{ team.group }})
+                </option>
+                {% endfor %}
+              </select>
+              <span class="text-gray-400 font-bold text-xs">vs</span>
+              <select name="away_team_id"
+                      class="text-sm border border-gray-300 dark:border-gray-600 rounded-md px-2 py-1 bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-400">
+                <option value="">— {% trans "Visitante" %} —</option>
+                {% for team in all_teams %}
+                <option value="{{ team.id }}" {% if match.away_team_id == team.id %}selected{% endif %}>
+                  {{ team.flag_emoji }} {{ team.name }} ({{ team.group }})
+                </option>
+                {% endfor %}
+              </select>
+              <button type="submit"
+                      class="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-xs font-semibold rounded-lg transition-colors">
+                {% trans "Asignar" %}
+              </button>
+            </form>
+          {% endif %}
+        </div>
+        {% if match.next_match %}
+        <p class="text-xs text-gray-400 mt-1.5">
+          → {% trans "Ganador a" %}: <span class="font-medium">{{ match.next_match.match_label }}</span>
+          ({{ match.next_match_slot|default:"-" }})
+        </p>
+        {% endif %}
+      </div>
+      {% empty %}
+        <p class="text-sm text-gray-400">{% trans "No hay partidos de dieciseisavos cargados." %}</p>
+      {% endfor %}
+    </div>
+  </div>
+
+</div>
+{% endblock %}

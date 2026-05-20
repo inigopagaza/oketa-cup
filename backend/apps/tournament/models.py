@@ -117,6 +117,21 @@ class Match(models.Model):
         default=False,
         verbose_name="Finalizado",
     )
+    next_match = models.ForeignKey(
+        "self",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="feeder_matches",
+        verbose_name="Siguiente partido del bracket",
+    )
+    next_match_slot = models.CharField(
+        max_length=4,
+        choices=[("home", "Local"), ("away", "Visitante")],
+        blank=True,
+        default="",
+        verbose_name="Slot en el siguiente partido",
+    )
 
     class Meta:
         verbose_name = "Partido"

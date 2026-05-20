@@ -58,6 +58,11 @@
           <a href="{% url 'tournament:results' %}" class="hover:text-green-600 dark:hover:text-green-400 transition-colors">
             {% trans "Resultados" %}
           </a>
+          {% if user.is_staff %}
+            <a href="{% url 'tournament:gestion' %}" class="hover:text-orange-600 dark:hover:text-orange-400 transition-colors">
+              ⚙️ {% trans "Gestión" %}
+            </a>
+          {% endif %}
           {% if not user.has_confirmed_selection %}
             <a href="{% url 'pool:select_teams' %}" class="btn-primary text-sm">
               {% trans "Elegir equipos" %}
