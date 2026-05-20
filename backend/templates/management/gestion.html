@@ -228,10 +228,36 @@
 
   <!-- ── SECCIÓN: Bracket R32 ── -->
   <div id="bracket" class="card p-5 space-y-4">
-    <h2 class="font-bold text-lg text-orange-700 dark:text-orange-400">🏆 {% trans "Dieciseisavos de final" %}</h2>
-    <p class="text-sm text-gray-500 dark:text-gray-400">
-      {% trans "Asigna los equipos clasificados a cada partido de dieciseisavos. Los ganadores se propagarán automáticamente al cuadro de octavos." %}
-    </p>
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <h2 class="font-bold text-lg text-orange-700 dark:text-orange-400">🏆 {% trans "Dieciseisavos de final" %}</h2>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+          {% trans "Asigna los equipos clasificados a cada partido de dieciseisavos. Los ganadores se propagarán automáticamente al cuadro de octavos." %}
+        </p>
+      </div>
+      <form action="{% url 'tournament:gestion_configure_bracket' %}" method="post"
+            x-data="{ confirming: false }">
+        {% csrf_token %}
+        <button type="button"
+                @click="confirming = true"
+                x-show="!confirming"
+                class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition-colors">
+          ⚙️ {% trans "Configurar bracket automáticamente" %}
+        </button>
+        <div x-show="confirming" class="flex items-center gap-2 text-sm">
+          <span class="text-gray-600 dark:text-gray-300">{% trans "¿Seguro? Resetea todas las relaciones del bracket." %}</span>
+          <button type="submit"
+                  class="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition-colors">
+            {% trans "Sí, configurar" %}
+          </button>
+          <button type="button"
+                  @click="confirming = false"
+                  class="px-3 py-1.5 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-semibold rounded-lg transition-colors">
+            {% trans "Cancelar" %}
+          </button>
+        </div>
+      </form>
+    </div>
 
     <div class="space-y-3">
       {% for match in r32_matches %}
