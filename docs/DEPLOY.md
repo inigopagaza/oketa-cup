@@ -3,7 +3,7 @@
 > **Nivel**: Principiante total en producción
 > **Objetivo**: App accesible desde internet, segura, con deploy automático
 > **Stack**: Proxmox VE → LXC Ubuntu 22.04 → Docker → Nginx + Gunicorn + PostgreSQL → Cloudflare Tunnel
-> **Dominio**: Gratuito via DuckDNS + Cloudflare
+> **Dominio**: 100% gratuito — EU.org (con Cloudflare Tunnel) o DuckDNS (con port forwarding)
 > **CI/CD**: GitHub Actions → SSH → `docker compose pull && up -d`
 
 ---
@@ -63,20 +63,46 @@ DJANGO_SECRET_KEY=...          # genera con: openssl rand -base64 50
 
 ## PASO 1 — Dominio gratuito
 
-### Opción A: DuckDNS (más rápida, recomendada para empezar)
+Tienes dos caminos completamente gratuitos. Elige uno:
+
+---
+
+### 🟢 Camino A: EU.org + Cloudflare Tunnel *(recomendado, 0€)*
+
+**Pros**: dominio real (p.ej. `oketa.eu.org`), sin abrir puertos, SSL automático vía Cloudflare
+**Contra**: la aprobación de EU.org tarda 1-2 semanas
+
+1. Ve a https://nic.eu.org y crea una cuenta
+2. Solicita un dominio: en el campo «Complete domain name» escribe algo como `oketa.eu.org`
+3. En los campos NS (nameservers), pon los de Cloudflare — los obtienes en el siguiente sub-paso
+4. Ve a https://dash.cloudflare.com → **Add a site** → introduce `oketa.eu.org` → elige el plan **Free**
+5. Cloudflare te da dos nameservers (p.ej. `aria.ns.cloudflare.com`): cópialos y pégalos en el formulario de EU.org
+6. Envía la solicitud y espera el email de aprobación (puede tardar hasta 2 semanas)
+7. Con esto activado, Cloudflare Tunnel funcionará con URL permanente y SSL automático
+
+> Mientras esperas la aprobación de EU.org puedes usar el Camino B para probar todo.
+
+---
+
+### 🔵 Camino B: DuckDNS + port forwarding + Let's Encrypt *(funciona hoy, 0€)*
+
+**Pros**: funciona en minutos, sin esperas
+**Contra**: necesitas abrir puertos 80 y 443 en el router, y tienes un subdominio `.duckdns.org`
 
 1. Ve a https://www.duckdns.org e inicia sesión con GitHub
 2. Crea un subdominio: p.ej. `oketa-cup` → te da `oketa-cup.duckdns.org`
-3. Guarda el **token** que aparece en la página (lo necesitarás para Cloudflare Tunnel)
-4. De momento déjalo con la IP que sea — Cloudflare Tunnel lo sobrescribirá
+3. Guarda el **token** que aparece en la página
+4. En el router, haz port forwarding:
+   - Puerto externo **80** → IP del LXC, puerto **80**
+   - Puerto externo **443** → IP del LXC, puerto **443**
+5. Instala un script que actualice DuckDNS cuando cambie tu IP dinámica (lo configuramos en el PASO 4)
+6. SSL con Let's Encrypt (Certbot) — lo configuramos en el PASO 8
 
-### Opción B: EU.org (dominio de segundo nivel real, gratis pero tarda 1-2 semanas en aprobarse)
+> Con este camino **no necesitas Cloudflare Tunnel** — el tráfico llega directo al servidor.
 
-1. Ve a https://nic.eu.org y crea una cuenta
-2. Solicita un dominio como `oketa.eu.org`
-3. Mientras lo aprueban, usa DuckDNS temporalmente
+---
 
-> **Recomendación**: empieza con DuckDNS. Si después quieres algo más "profesional", compra un `.com` por ~10€/año en Cloudflare Registrar (precio de coste, sin margen).
+> **¿Cuál elegir?** Si tienes prisa → Camino B. Si quieres la solución más limpia y sin abrir puertos → Camino A (espera los 1-2 días/semanas de EU.org).
 
 ---
 
@@ -582,43 +608,123 @@ jobs:
 
 ---
 
-## PASO 8 — Cloudflare Tunnel
+## PASO 8 — Acceso externo (SSL incluido)
 
-### 8.1 Añadir tu dominio a Cloudflare
+Sigue las instrucciones del camino que elegiste en el PASO 1.
 
-1. Ve a https://dash.cloudflare.com → **Add a site**
-2. Introduce tu dominio DuckDNS: `oketa-cup.duckdns.org`
-   - Si DuckDNS no aparece como opción, necesitarás un dominio propio. En ese caso:
-   - Ve a DuckDNS → copia los nameservers de Cloudflare → pégalos en DuckDNS (no es posible, DuckDNS no permite cambiar NS)
-   - **Alternativa real**: crea el túnel con un subdominio de `trycloudflare.com` para pruebas, o usa Cloudflare con un dominio propio
-   - **Solución práctica**: Compra un dominio barato en Cloudflare Registrar (~10€/año para `.com`) y añádelo directamente
+---
 
-> **Nota importante**: Cloudflare Tunnel con URL permanente requiere un dominio que gestiones en Cloudflare. DuckDNS no permite delegación de DNS. **Recomendación**: compra un dominio barato en Cloudflare (el más económico) — es la opción más sencilla y segura a largo plazo. Para probar, `trycloudflare.com` funciona sin dominio pero la URL cambia cada vez.
+### Camino A: Cloudflare Tunnel (con EU.org)
 
-### 8.2 Crear el túnel en Cloudflare
+> Prerequisito: EU.org aprobado y sus nameservers apuntando a Cloudflare.
+
+**8A.1 Crear el túnel**
 
 1. Ve a **Cloudflare Dashboard** → **Zero Trust** → **Networks** → **Tunnels**
-2. Click en **Create a tunnel**
-3. Nombre: `oketa-cup-home`
-4. Selecciona **Docker** como entorno
-5. Cloudflare te da un comando con el token:
+2. Click en **Create a tunnel** → nombre: `oketa-cup-home`
+3. Selecciona **Docker** como entorno
+4. Cloudflare te da un token:
    ```
    cloudflared tunnel run --token eyJhIjoiXXXXX...
    ```
-6. Copia ese token → guárdalo como secreto `CLOUDFLARE_TUNNEL_TOKEN` en GitHub
+5. Copia ese token → guárdalo como secreto `CLOUDFLARE_TUNNEL_TOKEN` en GitHub
 
-### 8.3 Configurar el tunnel para apuntar a Nginx
+**8A.2 Apuntar el túnel a Nginx**
 
-En la misma página del túnel, en **Public Hostname**:
+En la misma página, en **Public Hostname**:
 
 | Campo | Valor |
 |---|---|
 | Subdomain | (vacío o `www`) |
-| Domain | tu dominio |
+| Domain | `oketa.eu.org` |
 | Service Type | HTTP |
 | URL | `nginx:80` |
 
-Cloudflare añade HTTPS automáticamente — no necesitas gestionar certificados.
+Cloudflare añade HTTPS automáticamente. No necesitas gestionar certificados. ✓
+
+**8A.3 Verificar**
+
+Arrancar el contenedor `cloudflared` ya está incluido en el `docker-compose.prod.yml`. Una vez arrancados los servicios, la app estará disponible en `https://oketa.eu.org`.
+
+---
+
+### Camino B: DuckDNS + port forwarding + Let's Encrypt
+
+> Prerequisito: puertos 80 y 443 abiertos en el router (apuntando al LXC).
+
+**8B.1 Script de actualización de IP dinámica**
+
+En el LXC:
+```bash
+# Crear script que actualiza DuckDNS cuando cambia tu IP
+cat > /home/deploy/update_duckdns.sh << 'EOF'
+#!/bin/bash
+curl -s "https://www.duckdns.org/update?domains=oketa-cup&token=TU_TOKEN_DUCKDNS&ip=" > /dev/null
+EOF
+chmod +x /home/deploy/update_duckdns.sh
+
+# Ejecutar cada 5 minutos vía cron
+(crontab -l 2>/dev/null; echo "*/5 * * * * /home/deploy/update_duckdns.sh") | crontab -
+```
+
+**8B.2 SSL con Let's Encrypt (Certbot)**
+
+```bash
+# Instalar Certbot en el LXC
+apt install -y certbot
+
+# Obtener certificado (Nginx debe estar parado o el puerto 80 libre)
+docker compose -f docker/docker-compose.prod.yml stop nginx
+
+certbot certonly --standalone \
+  -d oketa-cup.duckdns.org \
+  --email tu@email.com \
+  --agree-tos \
+  --non-interactive
+
+docker compose -f docker/docker-compose.prod.yml start nginx
+```
+
+**8B.3 Montar los certificados en Nginx**
+
+Actualiza `docker-compose.prod.yml` para montar los certificados:
+```yaml
+  nginx:
+    volumes:
+      - ./nginx/nginx.prod.conf:/etc/nginx/conf.d/default.conf:ro
+      - static_files:/var/www/static:ro
+      - media_files:/var/www/media:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro   # ← añadir esta línea
+```
+
+Y actualiza `nginx.prod.conf` para escuchar en 443:
+```nginx
+server {
+    listen 80;
+    server_name oketa-cup.duckdns.org;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name oketa-cup.duckdns.org;
+
+    ssl_certificate     /etc/letsencrypt/live/oketa-cup.duckdns.org/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/oketa-cup.duckdns.org/privkey.pem;
+
+    # ... resto igual que antes
+}
+```
+
+**8B.4 Renovación automática del certificado**
+
+Let's Encrypt caduca cada 90 días, renueva automáticamente:
+```bash
+# Añadir al cron
+(crontab -l 2>/dev/null; echo "0 3 * * 1 certbot renew --quiet && docker compose -f /home/deploy/oketa-cup/docker/docker-compose.prod.yml restart nginx") | crontab -
+```
+
+> Con el Camino B **no necesitas `cloudflared`** — puedes eliminar ese servicio del `docker-compose.prod.yml` y también la variable `CLOUDFLARE_TUNNEL_TOKEN`.
 
 ---
 
