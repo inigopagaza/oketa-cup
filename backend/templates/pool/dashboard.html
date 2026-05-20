@@ -6,17 +6,79 @@
 
 <div class="space-y-8">
 
+  <!-- Panel de administración (solo staff) -->
+  {% if request.user.is_staff %}
+  <div class="rounded-xl border-2 border-orange-400 dark:border-orange-500 bg-orange-50 dark:bg-orange-900/10 p-5 space-y-5">
+    <h2 class="font-bold text-lg text-orange-700 dark:text-orange-400">⚙️ {% trans "Panel de administración" %}</h2>
+
+    <!-- Introducir resultados -->
+    <div>
+      <h3 class="font-semibold text-sm text-orange-600 dark:text-orange-300 mb-3">{% trans "Partidos pendientes de resultado" %}</h3>
+      {% if pending_matches %}
+        <div class="space-y-3">
+          {% for match in pending_matches %}
+          <form action="{% url 'tournament:admin_set_result' match.id %}" method="post"
+                class="flex flex-wrap items-center gap-2 bg-white dark:bg-gray-800 rounded-lg px-4 py-3 text-sm shadow-sm">
+            {% csrf_token %}
+            <span class="flex-1 min-w-0 font-medium truncate">
+              {{ match.home_team.flag_emoji }} {{ match.home_team.name }}
+              <span class="text-gray-400 mx-1">vs</span>
+              {{ match.away_team.flag_emoji }} {{ match.away_team.name }}
+            </span>
+            <span class="text-xs text-gray-400 whitespace-nowrap">{{ match.scheduled_at|date:"d/m H:i" }}</span>
+            <input type="number" name="home_score" min="0" max="99" placeholder="0"
+                   value="{% if match.home_score is not None %}{{ match.home_score }}{% endif %}"
+                   class="w-14 text-center border border-gray-300 dark:border-gray-600 rounded-md px-2 py-1 bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-400" required>
+            <span class="text-gray-400 font-bold">–</span>
+            <input type="number" name="away_score" min="0" max="99" placeholder="0"
+                   value="{% if match.away_score is not None %}{{ match.away_score }}{% endif %}"
+                   class="w-14 text-center border border-gray-300 dark:border-gray-600 rounded-md px-2 py-1 bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-400" required>
+            <label class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 cursor-pointer select-none">
+              <input type="checkbox" name="is_finished" value="1" class="rounded accent-orange-500">
+              {% trans "Finalizado" %}
+            </label>
+            <button type="submit"
+                    class="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-xs font-semibold rounded-lg transition-colors">
+              {% trans "Guardar" %}
+            </button>
+          </form>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="text-sm text-gray-400">{% trans "No hay partidos pasados pendientes de resultado." %}</p>
+      {% endif %}
+    </div>
+
+    <!-- Recalcular puntuaciones -->
+    <div class="border-t border-orange-200 dark:border-orange-700 pt-4">
+      <form action="{% url 'tournament:admin_recalculate' %}" method="post" class="flex items-center gap-3">
+        {% csrf_token %}
+        <p class="text-sm text-gray-600 dark:text-gray-400 flex-1">
+          {% trans "Recalcula los puntos de todos los partidos finalizados (operación idempotente)." %}
+        </p>
+        <button type="submit"
+                class="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-lg transition-colors whitespace-nowrap">
+          🔄 {% trans "Recalcular puntuaciones" %}
+        </button>
+      </form>
+    </div>
+  </div>
+  {% endif %}
+
   <!-- Saludo -->
   <div>
-    <h1 class="text-2xl font-bold">{% trans "Hola" %}, {{ participant.user.username }} 👋</h1>
+    <h1 class="text-2xl font-bold">{% trans "Hola" %}, {{ request.user.username }} 👋</h1>
+    {% if not request.user.is_staff %}
     <p class="text-gray-500 dark:text-gray-400 text-sm mt-1">
       {% trans "Tus puntos totales:" %} <strong class="text-green-600 dark:text-green-400 text-lg">{{ participant.total_points }}✨</strong>
     </p>
+    {% endif %}
   </div>
 
   <div class="grid md:grid-cols-2 gap-6">
 
-    <!-- Mis equipos -->
+    <!-- Mis equipos (solo participantes) -->
+    {% if not request.user.is_staff %}
     <div class="card p-5">
       <h2 class="font-bold text-lg mb-4">{% trans "Mis selecciones" %}</h2>
       {% if team_scores %}
@@ -37,6 +99,7 @@
         <p class="text-gray-400 text-sm">{% trans "No tienes equipos seleccionados." %}</p>
       {% endif %}
     </div>
+    {% endif %}
 
     <!-- Partidos de hoy -->
     <div class="card p-5">
@@ -91,7 +154,7 @@
               <td class="py-2.5 pr-3 text-gray-400 tabular-nums">{{ forloop.counter }}</td>
               <td class="py-2.5 pr-3">
                 {{ p.user.username }}
-                {% if p.user == request.user %}<span class="text-green-600 dark:text-green-400 text-xs ml-1">← tú</span>{% endif %}
+                {% if p.user == request.user and not request.user.is_staff %}<span class="text-green-600 dark:text-green-400 text-xs ml-1">&larr; t&uacute;</span>{% endif %}
               </td>
               <td class="py-2.5 text-right font-bold text-green-600 dark:text-green-400 tabular-nums">
                 {{ p.total_points }}✨

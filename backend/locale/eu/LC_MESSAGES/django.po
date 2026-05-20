@@ -166,3 +166,23 @@ msgstr "Egutegia ez dago kargatuta oraindik."
 # Formato de fecha en la página de resultados (fase de grupos)
 msgid "l, d/m/Y"
 msgstr "Y/m/d"
+
+# --- Panel de administración ---
+
+msgid "Panel de administración"
+msgstr "Administrazio panela"
+
+msgid "Partidos pendientes de resultado"
+msgstr "Emaitzak sartzeko zain dauden partidak"
+
+msgid "Guardar"
+msgstr "Gorde"
+
+msgid "No hay partidos pasados pendientes de resultado."
+msgstr "Ez dago emaitzarik sartzeko zain den partidarik."
+
+msgid "Recalcula los puntos de todos los partidos finalizados (operación idempotente)."
+msgstr "Amaitutako partida guztien puntuak birkalkulatzen ditu (eragiketa idempotentea)."
+
+msgid "Recalcular puntuaciones"
+msgstr "Puntuazioak birkalkultatu"

@@ -18,15 +18,17 @@ def dashboard(request: HttpRequest) -> HttpResponse:
     Muestra la clasificación general, los equipos del usuario
     y los partidos del día.
     """
-    # Si el usuario no ha confirmado selección, redirigir a seleccionar
-    if not request.user.has_confirmed_selection:  # type: ignore[union-attr]
+    # El admin no necesita confirmar selección
+    if not request.user.is_staff and not request.user.has_confirmed_selection:  # type: ignore[union-attr]
         return redirect("pool:select_teams")
 
     participant, _ = Participant.objects.get_or_create(user=request.user)
 
-    # Clasificación general: todos los participantes ordenados por puntos
+    # Clasificación general: participantes normales ordenados por puntos
     ranking = sorted(
-        Participant.objects.select_related("user").prefetch_related("teams"),
+        Participant.objects.select_related("user")
+        .prefetch_related("teams")
+        .filter(user__is_staff=False),
         key=lambda p: p.total_points,
         reverse=True,
     )
@@ -53,6 +55,17 @@ def dashboard(request: HttpRequest) -> HttpResponse:
         for team in participant.teams.all()
     ]
 
+    # Partidos pendientes de resultado (para el panel de admin)
+    pending_matches = None
+    if request.user.is_staff:
+        from django.utils import timezone as _tz
+
+        pending_matches = (
+            Match.objects.filter(is_finished=False, scheduled_at__lte=_tz.now())
+            .select_related("home_team", "away_team")
+            .order_by("scheduled_at")
+        )
+
     return render(
         request,
         "pool/dashboard.html",
@@ -61,6 +74,7 @@ def dashboard(request: HttpRequest) -> HttpResponse:
             "ranking": ranking,
             "todays_matches": todays_matches,
             "team_scores": team_scores,
+            "pending_matches": pending_matches,
         },
     )
 
@@ -73,7 +87,7 @@ def select_teams(request: HttpRequest) -> HttpResponse:
     Solo accesible si el usuario no ha confirmado su selección.
     Muestra todas las selecciones con precio y presupuesto restante.
     """
-    if request.user.has_confirmed_selection:  # type: ignore[union-attr]
+    if request.user.is_staff or request.user.has_confirmed_selection:  # type: ignore[union-attr]
         return redirect("pool:dashboard")
 
     config = TournamentConfig.get()
@@ -98,7 +112,7 @@ def confirm_selection(request: HttpRequest) -> HttpResponse:
     Recibe los IDs de equipos seleccionados, valida el presupuesto
     y los premios individuales, y marca la selección como confirmada.
     """
-    if request.user.has_confirmed_selection:  # type: ignore[union-attr]
+    if request.user.is_staff or request.user.has_confirmed_selection:  # type: ignore[union-attr]
         return redirect("pool:dashboard")
 
     config = TournamentConfig.get()

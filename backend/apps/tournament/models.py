@@ -125,11 +125,11 @@ class Match(models.Model):
 
     def __str__(self) -> str:
         score = f"{self.home_score}-{self.away_score}" if self.is_finished else "vs"
-        home = self.home_team.name if self.home_team_id else "TBD"
-        away = self.away_team.name if self.away_team_id else "TBD"
-        if self.match_label and not self.home_team_id:
-            return f"{self.match_label} ({self.get_phase_display()})"
-        return f"{home} {score} {away} ({self.get_phase_display()})"
+        home = self.home_team.name if self.home_team_id else "TBD"  # pyright: ignore[reportAttributeAccessIssue]
+        away = self.away_team.name if self.away_team_id else "TBD"  # pyright: ignore[reportAttributeAccessIssue]
+        if self.match_label and not self.home_team_id:  # pyright: ignore[reportAttributeAccessIssue]
+            return f"{self.match_label} ({self.get_phase_display()})"  # pyright: ignore[reportAttributeAccessIssue]
+        return f"{home} {score} {away} ({self.get_phase_display()})"  # pyright: ignore[reportAttributeAccessIssue]
 
     @property
     def home_won(self) -> bool | None:
@@ -193,5 +193,5 @@ class TournamentConfig(models.Model):
     @classmethod
     def get(cls) -> "TournamentConfig":
         """Obtiene la configuración, creándola si no existe."""
-        obj, _ = cls.objects.get_or_create(pk=1)
+        obj, _ = cls.objects.get_or_create(pk=1)  # pyright: ignore[reportAttributeAccessIssue]
         return obj

@@ -111,4 +111,4 @@ class TournamentConfigAdmin(admin.ModelAdmin):
 
     def has_add_permission(self, request):  # type: ignore[override]
         """Solo permite un registro (singleton)."""
-        return not TournamentConfig.objects.exists()
+        return not TournamentConfig.objects.exists()  # pyright: ignore[reportAttributeAccessIssue]

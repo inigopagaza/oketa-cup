@@ -295,20 +295,62 @@ login_view autentica al usuario
 
 **Implementación:**
 
-- [x] `config/urls.py`: añadida ruta `i18n/set_language/` apuntando a vista personalizada
+- [x] `config/urls.py`: ruta `i18n/set_language/` apuntando a vista personalizada
 - [x] `apps/accounts/views.set_language_view`: wrappea `django.views.i18n.set_language` y persiste en `user.preferred_language`
 - [x] `apps/accounts/views.login_view`: tras autenticar, pone `request.session["_language"]` del perfil del usuario
-- [x] `base.html`: switcher **ES | EU** en el navbar (botones que hacen POST a `set_language`)
-  - El botón del idioma activo se resalta en verde; el otro aparece en gris
-  - Usa `{{ LANGUAGE_CODE }}` del context processor `django.template.context_processors.i18n`
-- [x] `{% load i18n %}` + `{% trans "..." %}` en `base.html`, `login.html` y `dashboard.html`
-- [x] `locale/eu/LC_MESSAGES/django.po`: traducciones al Euskara de todos los textos de la UI
-  - Navegación: Dashboard → Aginte-panela, Resultados → Emaitzak, Elegir equipos → Taldeak hautatu, Salir → Irten, Entrar → Sartu
-  - Dashboard: Mis selecciones → Nire taldeak, Partidos de hoy → Gaurko partidak, Clasificación → Sailkapena
-  - Login: Usuario → Erabiltzailea, Contraseña → Pasahitza
-  - Footer: OketaCup 2026 · Mundial en casa → OketaCup 2026 · Mundialak etxean
+- [x] `base.html`: switcher **ES | EU** en el navbar; botón activo en verde, otro en gris
+- [x] `{% trans %}` en todos los templates: `base.html`, `login.html`, `dashboard.html`, `select_teams.html`, `results.html`
+- [x] `tournament/views.py`: nombres de fase con `gettext_lazy` para que se traduzcan al servirse
+- [x] `pool/select_teams.html`: predicciones individuales obligatorias (`required` + validación en vista); 🪙 solo para presupuesto, ✨ para puntos
+- [x] `tournament/results.html`: tabs por fase (Alpine.js `x-show`) + separadores por jornada en fase de grupos
+  - Agrupación por día: `regroup` con clave ISO `Y-m-d`; formato de fecha traducible (`l, d/m/Y` en ES → `Y/m/d` en EU)
+- [x] `locale/eu/LC_MESSAGES/django.po`: traducciones Euskara completas
+  - Nav: Emaitzak, Taldeak hautatu, Irten, Sartu
+  - Dashboard: Nire taldeak, Gaurko partidak, Sailkapena, Puntu
+  - Selección: Aukeratu zure taldeak, Aurrekontua, Hautaketa baieztatu
+  - Resultados: Talde fasea, Hamaseirenak, Zortzirenak, Final-Laurdenak, Final-Erdiak, Finala, Amaituta
+  - Fechas de jornada: formato `Y/m/d` (ej: 2026/06/11); grupos: `A Tald.`
 - [x] `locale/eu/LC_MESSAGES/django.mo`: compilado con `msgfmt`
+- [x] Commit: `feat(i18n): add es/eu language switcher with full translations` (e0bbb2f)
 - [x] Settings ya tenían `USE_I18N=True`, `LANGUAGES=[("es","Castellano"),("eu","Euskara")]`, `LocaleMiddleware` y `LOCALE_PATHS` configurados desde la Fase 0
+
+### ✅ FASE 2C — Panel de administración en la app *(completada 2026-05-20)*
+
+Objetivo: el usuario `admin` gestiona resultados y recálculo de puntos directamente desde la web, sin pasar por el Django admin.
+
+- [x] Admin bypassea la selección de equipos y entra directo al dashboard (`is_staff` salta el check `has_confirmed_selection`)
+- [x] `pool/views.select_teams` y `confirm_selection`: redirigen al dashboard si `is_staff`
+- [x] El admin no aparece en el ranking (filtro `user__is_staff=False` en la query de participantes)
+- [x] `dashboard.html`: panel naranja de administración visible solo para `is_staff` con todos los textos traducidos (es/eu)
+  - Formulario por cada partido pasado no finalizado → `home_score`, `away_score`, checkbox "Finalizado"
+  - Al guardar con "Finalizado" marcado, llama automáticamente a `process_match_result`
+  - Botón "🔄 Recalcular puntuaciones" → recalcula todos los partidos finalizados (idempotente)
+- [x] `tournament/views.admin_set_result` (POST, staff-only): actualiza resultado y procesa puntuación
+- [x] `tournament/views.admin_recalculate` (POST, staff-only): recalcula todos los finalizados
+- [x] `tournament/urls.py`: rutas `tournament/admin/resultado/<id>/` y `tournament/admin/recalcular/`
+- [x] `locale/eu/LC_MESSAGES/django.po`: traducciones del panel admin al Euskara
+
+### ✅ FASE 2D — Configuración de tipo estático (Pylance/Pyright) *(2026-05-20)*
+
+Objetivo: eliminar falsos positivos del linter en VS Code sin comprometer el código.
+
+**Contexto:** Al configurar el intérprete Python del venv, Pylance empezó a analizar el código y
+reportó errores en los modelos y vistas de Django — todos falsos positivos derivados de que Django
+genera atributos dinámicamente en runtime (mediante su metaclass) que los type checkers estáticos
+no pueden inferir sin ayuda.
+
+**Atributos afectados:**
+- `Model.objects` → añadido por la metaclass de Django; definido en `django-stubs` pero requiere el plugin de mypy para inferencia completa
+- `home_team_id`, `away_team_id` → generados automáticamente por Django para campos FK con `null=True`
+- `get_phase_display()` → generado por Django para campos con `choices`
+
+**Solución aplicada:**
+- [x] `.vscode/settings.json`: configura el intérprete (`backend/.venv/bin/python`), `extraPaths`, `typeCheckingMode: basic`
+- [x] `pyrightconfig.json`: `venvPath/venv` apuntando al venv de uv, `reportAttributeAccessIssue: "none"` para silenciar falsos positivos de atributos dinámicos de Django
+- [x] `# pyright: ignore[reportAttributeAccessIssue]` en las líneas afectadas de `models.py`, `admin.py` y `views.py` (defensa en profundidad)
+- [x] `django-stubs 6.0.4` ya estaba instalado como dev dependency; los errores desaparecen tras recargar la ventana de VS Code (`Developer: Reload Window`)
+
+**Nota:** `django-stubs` está diseñado para mypy (usa `mypy_django_plugin`). Pyright/Pylance no soporta plugins de mypy, por lo que algunos atributos dinámicos de Django siempre requerirán supresión manual o `pyrightconfig.json`.
 
 ### 🟢 FASE 3 — API REST *(post-lanzamiento)*
 
