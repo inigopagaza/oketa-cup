@@ -120,7 +120,7 @@ class Command(BaseCommand):
                     Match.Phase.QUARTER_FINAL,
                     Match.Phase.SEMI_FINAL,
                 ]
-            ).update(next_match=None, next_match_slot=None)
+            ).update(next_match=None, next_match_slot="")
 
         updated = 0
         for src_idx, (dst_idx, slot) in BRACKET_MAP.items():
