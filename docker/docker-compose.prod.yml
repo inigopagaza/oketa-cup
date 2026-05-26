@@ -20,7 +20,7 @@ services:
       - db
     environment:
       DJANGO_SETTINGS_MODULE: config.settings.production
-      DATABASE_URL: postgres://${POSTGRES_USER:-oketa}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-oketa_cup}
+      DATABASE_URL: ${DATABASE_URL:-postgres://${POSTGRES_USER:-oketa}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-oketa_cup}}
       DB_NAME: ${POSTGRES_DB:-oketa_cup}
       DB_USER: ${POSTGRES_USER:-oketa}
       DB_PASSWORD: ${POSTGRES_PASSWORD}
