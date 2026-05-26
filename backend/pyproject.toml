@@ -5,6 +5,7 @@ description = "Bolilla del Mundial 2026 — app web para gestionar una quiniela 
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "dj-database-url>=3.1.2",
     "django>=6.0.5",
     "django-cors-headers>=4.9.0",
     "djangorestframework>=3.17.1",

@@ -3,7 +3,7 @@
 > **Nivel**: Principiante total en producción
 > **Objetivo**: App accesible desde internet, segura, con deploy automático
 > **Stack**: Proxmox VE → LXC Ubuntu 22.04 → Docker → Nginx + Gunicorn + PostgreSQL → Cloudflare Tunnel
-> **Dominio**: 100% gratuito — EU.org (con Cloudflare Tunnel) o DuckDNS (con port forwarding)
+> **Dominio**: opciones gratuitas (EU.org o DuckDNS) y opción de pago rápida (.eus en dinahosting)
 > **CI/CD**: GitHub Actions → SSH → `docker compose pull && up -d`
 
 ---
@@ -61,9 +61,9 @@ DJANGO_SECRET_KEY=...          # genera con: openssl rand -base64 50
 
 ---
 
-## PASO 1 — Dominio gratuito
+## PASO 1 — Dominio (gratis o de pago)
 
-Tienes dos caminos completamente gratuitos. Elige uno:
+Tienes tres caminos. Elige uno:
 
 ---
 
@@ -81,6 +81,22 @@ Tienes dos caminos completamente gratuitos. Elige uno:
 7. Con esto activado, Cloudflare Tunnel funcionará con URL permanente y SSL automático
 
 > Mientras esperas la aprobación de EU.org puedes usar el Camino B para probar todo.
+
+---
+
+### 🟡 Camino A2: Dominio .eus en dinahosting + Cloudflare Tunnel *(recomendado si no quieres esperar)*
+
+**Pros**: dominio propio, activación rápida, sin abrir puertos, SSL automático vía Cloudflare
+**Contra**: tiene coste anual
+
+1. Compra tu dominio `.eus` en dinahosting (p.ej. `oketa-cup.eus`)
+2. Ve a https://dash.cloudflare.com → **Add a site** → introduce `oketa-cup.eus` → plan **Free**
+3. Cloudflare te mostrará dos nameservers (p.ej. `aria.ns.cloudflare.com` y `theo.ns.cloudflare.com`)
+4. En el panel de dinahosting, edita los nameservers del dominio y pon los de Cloudflare
+5. Espera la propagación DNS (normalmente minutos, a veces hasta 24h)
+6. Cuando Cloudflare marque el dominio como **Active**, ya puedes seguir con el túnel del PASO 8
+
+> Este camino sustituye completamente la parte de EU.org.
 
 ---
 
@@ -102,7 +118,10 @@ Tienes dos caminos completamente gratuitos. Elige uno:
 
 ---
 
-> **¿Cuál elegir?** Si tienes prisa → Camino B. Si quieres la solución más limpia y sin abrir puertos → Camino A (espera los 1-2 días/semanas de EU.org).
+> **¿Cuál elegir?**
+> - Sin coste y sin abrir puertos: Camino A (EU.org) si puedes esperar aprobación.
+> - Rápido y sin abrir puertos: Camino A2 (dinahosting + Cloudflare).
+> - 100% gratis y funcionando hoy: Camino B (DuckDNS + puertos 80/443).
 
 ---
 
@@ -614,9 +633,9 @@ Sigue las instrucciones del camino que elegiste en el PASO 1.
 
 ---
 
-### Camino A: Cloudflare Tunnel (con EU.org)
+### Camino A: Cloudflare Tunnel (con EU.org o dominio comprado en dinahosting)
 
-> Prerequisito: EU.org aprobado y sus nameservers apuntando a Cloudflare.
+> Prerequisito: dominio activo en Cloudflare y nameservers del dominio apuntando a Cloudflare.
 
 **8A.1 Crear el túnel**
 
@@ -636,7 +655,7 @@ En la misma página, en **Public Hostname**:
 | Campo | Valor |
 |---|---|
 | Subdomain | (vacío o `www`) |
-| Domain | `oketa.eu.org` |
+| Domain | `tu-dominio.eu.org` o `tu-dominio.eus` |
 | Service Type | HTTP |
 | URL | `nginx:80` |
 
@@ -644,7 +663,24 @@ Cloudflare añade HTTPS automáticamente. No necesitas gestionar certificados. �
 
 **8A.3 Verificar**
 
-Arrancar el contenedor `cloudflared` ya está incluido en el `docker-compose.prod.yml`. Una vez arrancados los servicios, la app estará disponible en `https://oketa.eu.org`.
+Arrancar el contenedor `cloudflared` ya está incluido en el `docker-compose.prod.yml`. Una vez arrancados los servicios, la app estará disponible en `https://tu-dominio.eu.org` o `https://tu-dominio.eus`.
+
+### Checklist rápida (10 minutos) para `.eus` + Cloudflare
+
+Usa esta lista antes del primer deploy automático:
+
+- [ ] El dominio `.eus` aparece como **Active** en Cloudflare
+- [ ] En dinahosting, los nameservers del dominio son exactamente los 2 de Cloudflare
+- [ ] En Cloudflare → **DNS**, existe al menos un registro para el host público que vas a usar (`@` o `www`)
+- [ ] En Cloudflare → **Zero Trust** → **Tunnels**, el túnel está en estado **Healthy**
+- [ ] En el túnel, el **Public Hostname** apunta a `nginx:80` (no a `localhost`)
+- [ ] `ALLOWED_HOSTS` incluye tu dominio (`tu-dominio.eus` y opcionalmente `www.tu-dominio.eus`)
+- [ ] `DJANGO_SETTINGS_MODULE=config.settings.production` en el entorno de producción
+- [ ] El servicio `cloudflared` arranca sin errores (`docker compose -f docker/docker-compose.prod.yml logs --tail=100 cloudflared`)
+- [ ] La app responde por HTTPS (`https://tu-dominio.eus`) y no devuelve 502/523
+- [ ] Login y una ruta protegida funcionan (sesión/cookies correctas en producción)
+
+Si algo falla, revisa en este orden: estado del túnel → host público del túnel → `ALLOWED_HOSTS` → logs de `nginx` y `web`.
 
 ---
 

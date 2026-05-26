@@ -5,44 +5,42 @@ Activa todas las medidas de seguridad. Requiere que las variables de
 entorno estén correctamente configuradas en el servidor.
 """
 
+import os
+
+import dj_database_url
+
 from .base import *  # noqa: F401, F403
 
 DEBUG = False
 
-# ── Seguridad HTTPS ────────────────────────────────────────────────────────────
+SECRET_KEY = os.environ["DJANGO_SECRET_KEY"]
 
-SECURE_SSL_REDIRECT = True
-SECURE_HSTS_SECONDS = 31536000  # 1 año
-SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-SECURE_HSTS_PRELOAD = True
+ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "").split(",")
+
+DATABASES = {
+    "default": dj_database_url.config(
+        env="DATABASE_URL",
+        conn_max_age=600,
+        ssl_require=False,  # conexión interna Docker, sin SSL necesario
+    )
+}
+
+# Seguridad
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
+SECURE_BROWSER_XSS_FILTER = True
+X_FRAME_OPTIONS = "DENY"
 
-# ── CORS restringido a orígenes conocidos ──────────────────────────────────────
+# Archivos estáticos
+STATIC_ROOT = BASE_DIR / "staticfiles"  # noqa: F405
 
-CORS_ALLOW_ALL_ORIGINS = False
-CORS_ALLOWED_ORIGINS: list[str] = []  # Rellenar con el dominio real
-
-# ── Email (configurar SMTP en producción) ──────────────────────────────────────
-
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-
-# ── Logging en producción ──────────────────────────────────────────────────────
-
+# Logs a stdout (Docker los captura)
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
-    "formatters": {
-        "verbose": {
-            "format": "{levelname} {asctime} {module} {process:d} {thread:d} {message}",
-            "style": "{",
-        },
-    },
     "handlers": {
-        "console": {
-            "class": "logging.StreamHandler",
-            "formatter": "verbose",
-        },
+        "console": {"class": "logging.StreamHandler"},
     },
     "root": {
         "handlers": ["console"],

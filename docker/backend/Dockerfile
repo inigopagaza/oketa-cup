@@ -1,57 +1,33 @@
 # Imagen de producción del backend OketaCup
 # Usa multi-stage build para mantener la imagen final ligera
-
-# ── Etapa 1: builder ─────────────────────────────────────────────────────────
+# ── Stage 1: builder ───────────────────────────────────────────────
 FROM python:3.13-slim AS builder
 
-# uv para instalar dependencias rápidamente
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
-
 WORKDIR /app
+RUN pip install uv
 
-# Copiar ficheros de dependencias primero (mejor uso del cache de Docker)
-COPY backend/pyproject.toml backend/uv.lock ./
-
-# Instalar dependencias en /app/.venv sin dependencias de dev
+COPY backend/pyproject.toml backend/uv.lock* ./
 RUN uv sync --frozen --no-dev
 
-# Activar el venv para los comandos siguientes (incluidos los de docker-compose en dev)
-ENV PATH="/app/.venv/bin:$PATH" \
-    PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
-
-# ── Etapa 2: runtime ──────────────────────────────────────────────────────────
+# ── Stage 2: runtime ───────────────────────────────────────────────
 FROM python:3.13-slim AS runtime
 
-# Usuario no-root por seguridad (OWASP best practice)
-RUN addgroup --system django && adduser --system --ingroup django django
+# Usuario sin root
+RUN groupadd -r appuser && useradd -r -g appuser appuser
 
 WORKDIR /app
 
-# Copiar el entorno virtual desde el builder
+# Copiar solo el venv del builder
 COPY --from=builder /app/.venv /app/.venv
+ENV PATH="/app/.venv/bin:$PATH"
 
-# Copiar el código fuente
+# Copiar el código
 COPY backend/ .
 
-# El entorno virtual va primero en el PATH
-ENV PATH="/app/.venv/bin:$PATH" \
-    PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    DJANGO_SETTINGS_MODULE=config.settings.production
+# Carpetas necesarias
+RUN mkdir -p staticfiles media && \
+    chown -R appuser:appuser /app
 
-# Recolectar estáticos en tiempo de build
-RUN python manage.py collectstatic --noinput
-
-# Cambiar al usuario no-root
-USER django
+USER appuser
 
 EXPOSE 8000
-
-# Gunicorn como servidor WSGI de producción
-CMD ["gunicorn", "config.wsgi:application", \
-     "--bind", "0.0.0.0:8000", \
-     "--workers", "3", \
-     "--timeout", "120", \
-     "--access-logfile", "-", \
-     "--error-logfile", "-"]
