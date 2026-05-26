@@ -10,11 +10,6 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-oketa_cup}
       POSTGRES_USER: ${POSTGRES_USER:-oketa}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-oketa}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
   web:
     image: ghcr.io/${GITHUB_REPOSITORY}:latest
@@ -22,8 +17,7 @@ services:
     security_opt:
       - apparmor=unconfined
     depends_on:
-      db:
-        condition: service_healthy
+      - db
     environment:
       DJANGO_SETTINGS_MODULE: config.settings.production
       DATABASE_URL: postgres://${POSTGRES_USER:-oketa}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-oketa_cup}
