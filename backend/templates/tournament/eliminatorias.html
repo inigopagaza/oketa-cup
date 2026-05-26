@@ -16,7 +16,10 @@
 {% endif %}
 
 {% if r32 %}
-<div class="overflow-x-auto pb-4">
+<p class="sm:hidden text-xs text-gray-500 dark:text-gray-400 mb-2">
+  {% trans "Desliza horizontalmente para ver todo el bracket" %}
+</p>
+<div class="overflow-x-auto pb-4 [scrollbar-width:thin] [-webkit-overflow-scrolling:touch] rounded-xl border border-gray-200 dark:border-gray-700 px-2 sm:px-3">
 
   <!-- Cabeceras de ronda -->
   <div class="flex text-center text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-2"
