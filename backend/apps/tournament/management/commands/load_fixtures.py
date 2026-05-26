@@ -3,6 +3,7 @@
 import json
 from pathlib import Path
 
+from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 
 from apps.tournament.models import Match, NationalTeam
@@ -24,7 +25,13 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        fixtures_path = Path(__file__).resolve().parents[5] / "data" / "fixtures.json"
+        fixtures_path = Path(settings.BASE_DIR) / "data" / "fixtures.json"
+
+        # Compatibilidad con estructura antigua (raíz del repo).
+        if not fixtures_path.exists():
+            legacy_path = Path(__file__).resolve().parents[5] / "data" / "fixtures.json"
+            if legacy_path.exists():
+                fixtures_path = legacy_path
 
         if not fixtures_path.exists():
             raise CommandError(f"No se encontró el fichero: {fixtures_path}")
