@@ -15,7 +15,22 @@ DEBUG = False
 
 SECRET_KEY = os.environ["DJANGO_SECRET_KEY"]
 
-ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "").split(",")
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in os.environ.get("ALLOWED_HOSTS", "").split(",")
+    if host.strip()
+]
+
+csrf_trusted_origins = os.environ.get("CSRF_TRUSTED_ORIGINS", "")
+if csrf_trusted_origins:
+    CSRF_TRUSTED_ORIGINS = [
+        origin.strip() for origin in csrf_trusted_origins.split(",") if origin.strip()
+    ]
+else:
+    # Fallback útil: construir orígenes HTTPS desde ALLOWED_HOSTS.
+    CSRF_TRUSTED_ORIGINS = [
+        f"https://{host}" for host in ALLOWED_HOSTS if "*" not in host
+    ]
 
 database_url = os.environ.get("DATABASE_URL")
 if database_url:
@@ -33,6 +48,7 @@ if database_url:
 
 # Seguridad
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+USE_X_FORWARDED_HOST = True
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 SECURE_BROWSER_XSS_FILTER = True
