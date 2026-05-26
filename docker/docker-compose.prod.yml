@@ -21,6 +21,11 @@ services:
     environment:
       DJANGO_SETTINGS_MODULE: config.settings.production
       DATABASE_URL: postgres://${POSTGRES_USER:-oketa}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-oketa_cup}
+      DB_NAME: ${POSTGRES_DB:-oketa_cup}
+      DB_USER: ${POSTGRES_USER:-oketa}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_HOST: db
+      DB_PORT: "5432"
       SECRET_KEY: ${DJANGO_SECRET_KEY}
       DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
       ALLOWED_HOSTS: ${ALLOWED_HOSTS}
