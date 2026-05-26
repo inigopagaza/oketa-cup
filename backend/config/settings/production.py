@@ -17,13 +17,19 @@ SECRET_KEY = os.environ["DJANGO_SECRET_KEY"]
 
 ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "").split(",")
 
-DATABASES = {
-    "default": dj_database_url.config(
-        env="DATABASE_URL",
-        conn_max_age=600,
-        ssl_require=False,  # conexión interna Docker, sin SSL necesario
-    )
-}
+database_url = os.environ.get("DATABASE_URL")
+if database_url:
+    try:
+        DATABASES = {
+            "default": dj_database_url.parse(
+                database_url,
+                conn_max_age=600,
+                ssl_require=False,  # conexión interna Docker, sin SSL necesario
+            )
+        }
+    except dj_database_url.ParseError:
+        # Fallback seguro: usar configuración DB_* heredada de base.py
+        pass
 
 # Seguridad
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
