@@ -36,7 +36,7 @@ services:
     volumes:
       - static_files:/app/staticfiles
       - media_files:/app/media
-      - ./data:/data:ro
+      - ./backend/data:/data:ro
 
   nginx:
     image: nginx:alpine
