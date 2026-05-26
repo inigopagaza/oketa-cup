@@ -1,0 +1,34 @@
+{% comment %}
+Tarjeta de partido compacta para el bracket eliminatorio.
+Requiere la variable `match` en el contexto.
+{% endcomment %}
+<div class="w-full rounded border overflow-hidden text-xs shadow-sm
+  {% if match.is_finished %}border-gray-300 dark:border-gray-500{% else %}border-gray-200 dark:border-gray-700{% endif %}
+  bg-white dark:bg-gray-900">
+  {% if match.home_team_id %}
+    {# Partido con equipos conocidos #}
+    <div class="flex items-center gap-1 px-2 py-1.5
+      {% if match.home_won == True %}bg-green-50 dark:bg-green-900/20 font-semibold{% endif %}">
+      <span class="leading-none">{{ match.home_team.flag_emoji }}</span>
+      <span class="flex-1 truncate leading-tight">{{ match.home_team.name }}</span>
+      <span class="font-mono tabular-nums ml-1
+        {% if match.is_finished %}font-bold{% else %}text-gray-300 dark:text-gray-600{% endif %}">
+        {% if match.is_finished %}{{ match.home_score }}{% else %}–{% endif %}
+      </span>
+    </div>
+    <div class="flex items-center gap-1 px-2 py-1.5 border-t border-gray-100 dark:border-gray-800
+      {% if match.home_won == False %}bg-green-50 dark:bg-green-900/20 font-semibold{% endif %}">
+      <span class="leading-none">{{ match.away_team.flag_emoji }}</span>
+      <span class="flex-1 truncate leading-tight">{{ match.away_team.name }}</span>
+      <span class="font-mono tabular-nums ml-1
+        {% if match.is_finished %}font-bold{% else %}text-gray-300 dark:text-gray-600{% endif %}">
+        {% if match.is_finished %}{{ match.away_score }}{% else %}–{% endif %}
+      </span>
+    </div>
+  {% else %}
+    {# Equipos pendientes de determinar #}
+    <div class="px-2 py-2 text-center text-gray-400 dark:text-gray-500 italic leading-tight text-[11px]">
+      {{ match.match_label|default:"Por determinar" }}
+    </div>
+  {% endif %}
+</div>

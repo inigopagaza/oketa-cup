@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Dashboard" %} · OketaCup{% endblock %}
+
+{% block content %}
+
+<div class="space-y-8">
+
+  <!-- Acceso rápido al panel de gestión (solo staff) -->
+  {% if request.user.is_staff %}
+  <div class="rounded-xl border-2 border-orange-400 dark:border-orange-500 bg-orange-50 dark:bg-orange-900/10 p-4 flex items-center justify-between gap-4">
+    <div>
+      <p class="font-semibold text-orange-700 dark:text-orange-300">⚙️ {% trans "Eres administrador" %}</p>
+      <p class="text-sm text-orange-600 dark:text-orange-400">{% trans "Gestiona resultados, premios y el bracket del torneo." %}</p>
+    </div>
+    <a href="{% url 'tournament:gestion' %}"
+       class="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-lg transition-colors whitespace-nowrap">
+      {% trans "Panel de gestión" %} →
+    </a>
+  </div>
+  {% endif %}
+
+  <!-- Saludo -->
+  <div>
+    <h1 class="text-2xl font-bold">{% trans "Hola" %}, {{ request.user.username }} 👋</h1>
+    {% if not request.user.is_staff %}
+    <p class="text-gray-500 dark:text-gray-400 text-sm mt-1">
+      {% trans "Tus puntos totales:" %} <strong class="text-green-600 dark:text-green-400 text-lg">{{ participant.total_points }}✨</strong>
+    </p>
+    {% endif %}
+  </div>
+
+  <div class="grid md:grid-cols-2 gap-6">
+
+    <!-- Mis equipos (solo participantes) -->
+    {% if not request.user.is_staff %}
+    <div class="card p-5">
+      <h2 class="font-bold text-lg mb-4">{% trans "Mis selecciones" %}</h2>
+      {% if team_scores %}
+        <ul class="space-y-2 mb-4">
+          {% for entry in team_scores %}
+            <li class="flex items-center justify-between">
+              <span class="flex items-center gap-2 text-sm">
+                <span class="text-xl">{{ entry.team.flag_emoji }}</span>
+                <span>{{ entry.team.name }}</span>
+              </span>
+              <span class="font-semibold text-green-600 dark:text-green-400 text-sm">
+                +{{ entry.points }}✨
+              </span>
+            </li>
+          {% endfor %}
+        </ul>
+        <div class="border-t border-gray-100 dark:border-gray-700 pt-3 space-y-1.5">
+          <p class="text-xs text-gray-500 dark:text-gray-400">
+            🏅 <span class="font-medium">{% trans "MVP" %}:</span> {{ participant.predicted_mvp|default:"—" }}
+          </p>
+          <p class="text-xs text-gray-500 dark:text-gray-400">
+            ⚽ <span class="font-medium">{% trans "Pichichi" %}:</span> {{ participant.predicted_top_scorer|default:"—" }}
+          </p>
+          <p class="text-xs text-gray-500 dark:text-gray-400">
+            🧤 <span class="font-medium">{% trans "Zamora" %}:</span> {{ participant.predicted_best_goalkeeper|default:"—" }}
+          </p>
+        </div>
+      {% else %}
+        <p class="text-gray-400 text-sm">{% trans "No tienes equipos seleccionados." %}</p>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Partidos de hoy -->
+    <div class="card p-5">
+      <h2 class="font-bold text-lg mb-4">{% trans "Partidos de hoy" %}</h2>
+      {% if todays_matches %}
+        <ul class="space-y-3">
+          {% for match in todays_matches %}
+            <li class="text-sm">
+              <div class="flex items-center justify-between gap-2">
+                <span class="flex items-center gap-1.5">
+                  <span>{{ match.home_team.flag_emoji }}</span>
+                  <span class="font-medium">{{ match.home_team.name }}</span>
+                </span>
+                {% if match.is_finished %}
+                  <span class="font-bold text-base tabular-nums">{{ match.home_score }}–{{ match.away_score }}</span>
+                {% else %}
+                  <span class="text-gray-400 text-xs">{{ match.scheduled_at|time:"H:i" }}</span>
+                {% endif %}
+                <span class="flex items-center gap-1.5 justify-end">
+                  <span class="font-medium">{{ match.away_team.name }}</span>
+                  <span>{{ match.away_team.flag_emoji }}</span>
+                </span>
+              </div>
+              {% if match.group %}
+                <p class="text-xs text-gray-400 mt-0.5">Grupo {{ match.group }}</p>
+              {% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="text-gray-400 text-sm">{% trans "No hay partidos hoy." %}</p>
+      {% endif %}
+    </div>
+
+  </div>
+
+  <!-- Clasificación general -->
+  <div class="card p-5">
+    <h2 class="font-bold text-lg mb-4">{% trans "Clasificación" %}</h2>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide border-b border-gray-200 dark:border-gray-700">
+            <th class="pb-2 pr-3">#</th>
+            <th class="pb-2 pr-3">{% trans "Participante" %}</th>
+            <th class="pb-2 text-right">{% trans "Puntos" %}</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+          {% for p in ranking %}
+            <tr class="{% if p.user == request.user %}bg-green-50 dark:bg-green-900/10 font-semibold{% endif %}">
+              <td class="py-2.5 pr-3 text-gray-400 tabular-nums">{{ forloop.counter }}</td>
+              <td class="py-2.5 pr-3">
+                {{ p.user.username }}
+                {% if p.user == request.user and not request.user.is_staff %}<span class="text-green-600 dark:text-green-400 text-xs ml-1">&larr; t&uacute;</span>{% endif %}
+              </td>
+              <td class="py-2.5 text-right font-bold text-green-600 dark:text-green-400 tabular-nums">
+                {{ p.total_points }}✨
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p class="text-xs text-gray-400 mt-3 text-right">
+      <a href="{% url 'tournament:results' %}" class="hover:text-green-600 transition-colors">Ver resultados del Mundial →</a>
+    </p>
+  </div>
+
+</div>
+
+{% endblock %}

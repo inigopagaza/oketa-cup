@@ -1,0 +1,351 @@
+# Basque (Euskara) translations for OketaCup.
+# Copyright (C) 2026 OketaCup
+#
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: eu\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+# --- Navegación ---
+
+msgid "Dashboard"
+msgstr "Aginte-panela"
+
+msgid "Grupos"
+msgstr "Taldeak"
+
+msgid "Eliminatorias"
+msgstr "Kanporaketa"
+
+msgid "Gestión"
+msgstr "Kudeaketa"
+
+msgid "Resultados"
+msgstr "Emaitzak"
+
+msgid "Elegir equipos"
+msgstr "Taldeak hautatu"
+
+msgid "Salir"
+msgstr "Irten"
+
+msgid "Entrar"
+msgstr "Sartu"
+
+msgid "Cambiar tema"
+msgstr "Gaia aldatu"
+
+# --- Footer ---
+
+msgid "OketaCup 2026 · Mundial en casa 🏆"
+msgstr "OketaCup 2026 · Mundialak etxean 🏆"
+
+# --- Login ---
+
+msgid "Bolilla del Mundial entre amigos"
+msgstr "Mundialeko kiñola lagunekin"
+
+msgid "Usuario o contraseña incorrectos."
+msgstr "Erabiltzailea edo pasahitza okerrak dira."
+
+msgid "Usuario"
+msgstr "Erabiltzailea"
+
+msgid "Contraseña"
+msgstr "Pasahitza"
+
+# --- Dashboard ---
+
+msgid "Hola"
+msgstr "Kaixo"
+
+msgid "Tus puntos totales:"
+msgstr "Zure puntu guztiak:"
+
+msgid "Mis selecciones"
+msgstr "Nire taldeak"
+
+msgid "No tienes equipos seleccionados."
+msgstr "Ez daukazu talderik hautatuta."
+
+msgid "Partidos de hoy"
+msgstr "Gaurko partidak"
+
+msgid "No hay partidos hoy."
+msgstr "Gaur ez dago partidarik."
+
+msgid "Clasificación"
+msgstr "Sailkapena"
+
+msgid "Participante"
+msgstr "Parte-hartzailea"
+
+msgid "Puntos"
+msgstr "Puntu"
+
+msgid "puntos"
+msgstr "puntu"
+
+# --- Selección de equipos ---
+
+msgid "Elige tus selecciones"
+msgstr "Aukeratu zure taldeak"
+
+msgid "Selecciona los equipos en los que apuestas. Presupuesto:"
+msgstr "Aukeratu apustu egiten duzun taldeak. Aurrekontua:"
+
+msgid "Gastado"
+msgstr "Gastua"
+
+msgid "Quedan"
+msgstr "Gelditzen dira"
+
+msgid "Grupo"
+msgstr "Taldea"
+
+msgid "Predicciones individuales"
+msgstr "Banakako iragarpenak"
+
+msgid "opcionales"
+msgstr "aukerakoak"
+
+msgid "MVP del torneo"
+msgstr "Txapelketako MVP-a"
+
+msgid "Pichichi"
+msgstr "Goleatzailerik onena"
+
+msgid "Mejor portero"
+msgstr "Atezain onena"
+
+msgid "Nombre del jugador"
+msgstr "Jokalariaren izena"
+
+msgid "Una vez confirmado no podrás cambiar tu selección."
+msgstr "Behin berretuta ezin izango duzu zure hautaketa aldatu."
+
+msgid "Confirmar selección"
+msgstr "Hautaketa baieztatu"
+
+# --- Resultados ---
+
+msgid "Resultados del Mundial 2026"
+msgstr "2026ko Mundialaren emaitzak"
+
+msgid "Fase de grupos"
+msgstr "Talde fasea"
+
+msgid "Dieciseisavos de final"
+msgstr "Hamaseirenak"
+
+msgid "Octavos de final"
+msgstr "Zortzirenak"
+
+msgid "Cuartos de final"
+msgstr "Final-Laurdenak"
+
+msgid "Semifinales"
+msgstr "Final-Erdiak"
+
+msgid "3er y 4º puesto"
+msgstr "3. eta 4. postua"
+
+msgid "Final"
+msgstr "Finala"
+
+#. Ej: "Gr. A" → "A Tald."
+#, python-format
+msgid "Gr. %(group)s"
+msgstr "%(group)s Tald."
+
+msgid "Am."
+msgstr "Am."
+
+msgid "Finalizado"
+msgstr "Amaituta"
+
+msgid "Pendiente"
+msgstr "Zain"
+
+msgid "El calendario todavía no está cargado."
+msgstr "Egutegia ez dago kargatuta oraindik."
+
+# Formato de fecha en la página de resultados (fase de grupos)
+msgid "l, d/m/Y"
+msgstr "Y/m/d"
+
+# --- Panel de administración ---
+
+msgid "Panel de administración"
+msgstr "Administrazio panela"
+
+msgid "Panel de gestión"
+msgstr "Kudeaketa panela"
+
+msgid "Herramientas de administración del torneo"
+msgstr "Txapelketaren administrazio-tresnak"
+
+msgid "Premios"
+msgstr "Sariak"
+
+msgid "Bracket R32"
+msgstr "R32 Bracket-a"
+
+msgid "Gestión de resultados"
+msgstr "Emaitzen kudeaketa"
+
+msgid "Premios individuales"
+msgstr "Banakako sariak"
+
+msgid "Asigna los equipos clasificados a cada partido de dieciseisavos. Los ganadores se propagarán automáticamente al cuadro de octavos."
+msgstr "Sailkatutako taldeak esleitu hamaseirekoetako partida bakoitzari. Garaileek automatikoki pasatuko dira zortzirenekoetara."
+
+msgid "Configurar bracket automáticamente"
+msgstr "Bracket-a automatikoki konfiguratu"
+
+msgid "¿Seguro? Resetea todas las relaciones del bracket."
+msgstr "Ziur? Bracket-eko erlazio guztiak berrezarriko dira."
+
+msgid "Sí, configurar"
+msgstr "Bai, konfiguratu"
+
+msgid "Cancelar"
+msgstr "Utzi"
+
+msgid "Local"
+msgstr "Bertakoa"
+
+msgid "Visitante"
+msgstr "Kanpokoa"
+
+msgid "Asignar"
+msgstr "Esleitu"
+
+msgid "Ganador a"
+msgstr "Garailea honetara"
+
+msgid "No hay partidos de dieciseisavos cargados."
+msgstr "Ez dago hamaseirekoetako partidarik kargatuta."
+
+msgid "Nombre del MVP..."
+msgstr "MVParen izena..."
+
+msgid "Nombre del Pichichi..."
+msgstr "Pichichiren izena..."
+
+msgid "Nombre del Zamora..."
+msgstr "Zamoraren izena..."
+
+msgid "Partidos pendientes de resultado"
+msgstr "Emaitzak sartzeko zain dauden partidak"
+
+msgid "Guardar"
+msgstr "Gorde"
+
+msgid "No hay partidos pasados pendientes de resultado."
+msgstr "Ez dago emaitzarik sartzeko zain den partidarik."
+
+msgid "Recalcula los puntos de todos los partidos finalizados (operación idempotente)."
+msgstr "Amaitutako partida guztien puntuak birkalkulatzen ditu (eragiketa idempotentea)."
+
+msgid "Recalcular puntuaciones"
+msgstr "Puntuazioak birkalkultatu"
+
+msgid "Corregir resultados finalizados"
+msgstr "Amaitutako emaitzak zuzendu"
+
+msgid "Filtrar"
+msgstr "Iragazi"
+
+msgid "No hay partidos finalizados en esa fecha."
+msgstr "Ez dago amaitutako partidarik data horretan."
+
+msgid "Corregir"
+msgstr "Zuzendu"
+
+msgid "Premios individuales (MVP, Pichichi, Zamora)"
+msgstr "Banakako sariak (MVP, Pichichi, Zamora)"
+
+msgid "MVP real del torneo"
+msgstr "Txapelketako MVP erreala"
+
+msgid "Pichichi real (máximo goleador)"
+msgstr "Pichichi erreala (goleatzaile nagusia)"
+
+msgid "Zamora real (mejor portero)"
+msgstr "Zamora erreala (atezain onena)"
+
+msgid "Marca quién lo acertó:"
+msgstr "Markatu nork asmatu zuen:"
+
+msgid "No hay participantes."
+msgstr "Ez dago parte-hartzailerik."
+
+msgid "Adjudicar premios"
+msgstr "Sariak esleitu"
+
+# --- Vista Grupos ---
+
+msgid "Clasificaciones"
+msgstr "Sailkapen-taulak"
+
+msgid "Equipo"
+msgstr "Selekzioa"
+
+msgid "Partidos jugados"
+msgstr "Jokatutako partidak"
+
+msgid "Victorias"
+msgstr "Garaipenak"
+
+msgid "Empates"
+msgstr "Berdinketak"
+
+msgid "Derrotas"
+msgstr "Porrota"
+
+msgid "Goles a favor"
+msgstr "Aldeko golak"
+
+msgid "Goles en contra"
+msgstr "Aurkako golak"
+
+msgid "Diferencia de goles"
+msgstr "Gol-diferentzia"
+
+msgid "Clasificado"
+msgstr "Sailkatuta"
+
+msgid "Posible repesca"
+msgstr "Birgaitze posiblea"
+
+msgid "No hay datos de equipos cargados todavía."
+msgstr "Oraindik ez daude talderik kargatuta."
+
+# --- Vista Eliminatorias ---
+
+msgid "Bracket del Mundial 2026"
+msgstr "2026ko Mundialaren bracket-a"
+
+msgid "El bracket aún no está configurado. Los partidos se muestran en orden cronológico."
+msgstr "Bracket-a ez dago konfiguratu oraindik. Partidak data-ordenan agertzen dira."
+
+msgid "Configurar"
+msgstr "Konfiguratu"
+
+msgid "Dieciseisavos"
+msgstr "Hamaseirenak"
+
+msgid "Octavos"
+msgstr "Zortzirenak"
+
+msgid "Cuartos"
+msgstr "Laurdenak"
+
+msgid "3er puesto"
+msgstr "3. postua"
+
+msgid "No hay partidos eliminatorios cargados todavía."
+msgstr "Oraindik ez daude kanporaketa-partidarik kargatuta."

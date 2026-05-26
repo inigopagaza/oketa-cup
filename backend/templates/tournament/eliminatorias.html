@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Eliminatorias" %} · OketaCup{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-bold mb-1">🏆 {% trans "Eliminatorias" %}</h1>
+<p class="text-sm text-gray-500 dark:text-gray-400 mb-5">{% trans "Bracket del Mundial 2026" %}</p>
+
+{% if not bracket_ready %}
+  <div class="card px-4 py-3 mb-5 text-sm border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300">
+    ⚠️ {% trans "El bracket aún no está configurado. Los partidos se muestran en orden cronológico." %}
+    {% if request.user.is_staff %}
+      <a href="{% url 'tournament:gestion' %}" class="underline ml-1">{% trans "Configurar" %}</a>
+    {% endif %}
+  </div>
+{% endif %}
+
+{% if r32 %}
+<p class="sm:hidden text-xs text-gray-500 dark:text-gray-400 mb-2">
+  {% trans "Desliza horizontalmente para ver todo el bracket" %}
+</p>
+<div class="overflow-x-auto pb-4 [scrollbar-width:thin] [-webkit-overflow-scrolling:touch] rounded-xl border border-gray-200 dark:border-gray-700 px-2 sm:px-3">
+
+  <!-- Cabeceras de ronda -->
+  <div class="flex text-center text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-2"
+       style="min-width: 948px">
+    <div class="flex-shrink-0 w-44">{% trans "Dieciseisavos" %}</div>
+    <div class="flex-shrink-0 w-6"></div>
+    <div class="flex-shrink-0 w-40">{% trans "Octavos" %}</div>
+    <div class="flex-shrink-0 w-6"></div>
+    <div class="flex-shrink-0 w-40">{% trans "Cuartos" %}</div>
+    <div class="flex-shrink-0 w-6"></div>
+    <div class="flex-shrink-0 w-40">{% trans "Semifinales" %}</div>
+    <div class="flex-shrink-0 w-6"></div>
+    <div class="flex-shrink-0 w-44">{% trans "Final" %}</div>
+  </div>
+
+  <!-- Bracket -->
+  <div class="flex items-stretch"
+       style="min-width: 948px; height: 1100px">
+
+    <!-- Dieciseisavos (16) -->
+    <div class="flex-shrink-0 w-44 flex flex-col">
+      {% for match in r32 %}
+        <div class="flex-1 flex items-center px-0 py-0.5">
+          {% include "tournament/_bracket_match.html" %}
+        </div>
+      {% endfor %}
+    </div>
+
+    <!-- Conector R32→R16 (8 brazos) -->
+    <div class="flex-shrink-0 w-6 flex flex-col">
+      {% for i in "12345678" %}
+        <div class="flex-1 flex flex-col">
+          <div class="flex-1 border-t-2 border-r-2 border-gray-200 dark:border-gray-700 rounded-tr"></div>
+          <div class="flex-1 border-b-2 border-r-2 border-gray-200 dark:border-gray-700 rounded-br"></div>
+        </div>
+      {% endfor %}
+    </div>
+
+    <!-- Octavos (8) -->
+    <div class="flex-shrink-0 w-40 flex flex-col">
+      {% for match in r16 %}
+        <div class="flex-1 flex items-center px-0 py-0.5">
+          {% include "tournament/_bracket_match.html" %}
+        </div>
+      {% endfor %}
+    </div>
+
+    <!-- Conector R16→QF (4 brazos) -->
+    <div class="flex-shrink-0 w-6 flex flex-col">
+      {% for i in "1234" %}
+        <div class="flex-1 flex flex-col">
+          <div class="flex-1 border-t-2 border-r-2 border-gray-200 dark:border-gray-700 rounded-tr"></div>
+          <div class="flex-1 border-b-2 border-r-2 border-gray-200 dark:border-gray-700 rounded-br"></div>
+        </div>
+      {% endfor %}
+    </div>
+
+    <!-- Cuartos (4) -->
+    <div class="flex-shrink-0 w-40 flex flex-col">
+      {% for match in qf %}
+        <div class="flex-1 flex items-center px-0 py-0.5">
+          {% include "tournament/_bracket_match.html" %}
+        </div>
+      {% endfor %}
+    </div>
+
+    <!-- Conector QF→SF (2 brazos) -->
+    <div class="flex-shrink-0 w-6 flex flex-col">
+      {% for i in "12" %}
+        <div class="flex-1 flex flex-col">
+          <div class="flex-1 border-t-2 border-r-2 border-gray-200 dark:border-gray-700 rounded-tr"></div>
+          <div class="flex-1 border-b-2 border-r-2 border-gray-200 dark:border-gray-700 rounded-br"></div>
+        </div>
+      {% endfor %}
+    </div>
+
+    <!-- Semifinales (2) -->
+    <div class="flex-shrink-0 w-40 flex flex-col">
+      {% for match in sf %}
+        <div class="flex-1 flex items-center px-0 py-0.5">
+          {% include "tournament/_bracket_match.html" %}
+        </div>
+      {% endfor %}
+    </div>
+
+    <!-- Conector SF→Final (1 brazo) -->
+    <div class="flex-shrink-0 w-6 flex flex-col">
+      <div class="flex-1 flex flex-col">
+        <div class="flex-1 border-t-2 border-r-2 border-gray-200 dark:border-gray-700 rounded-tr"></div>
+        <div class="flex-1 border-b-2 border-r-2 border-gray-200 dark:border-gray-700 rounded-br"></div>
+      </div>
+    </div>
+
+    <!-- Final (1) -->
+    <div class="flex-shrink-0 w-44 flex flex-col">
+      {% if final %}
+        <div class="flex-1 flex items-center px-0 py-0.5">
+          {% with match=final %}
+            {% include "tournament/_bracket_match.html" %}
+          {% endwith %}
+        </div>
+      {% endif %}
+    </div>
+
+  </div><!-- /bracket -->
+
+  <!-- Tercer y cuarto puesto -->
+  {% if third %}
+    <div class="mt-6 pt-5 border-t border-gray-200 dark:border-gray-700 flex items-center gap-4">
+      <span class="text-sm font-semibold text-gray-500 flex-shrink-0">🥉 {% trans "3er puesto" %}</span>
+      <div class="w-44">
+        {% with match=third %}
+          {% include "tournament/_bracket_match.html" %}
+        {% endwith %}
+      </div>
+    </div>
+  {% endif %}
+
+</div><!-- /overflow -->
+
+{% else %}
+  <div class="card px-4 py-8 text-center text-gray-400">
+    {% trans "No hay partidos eliminatorios cargados todavía." %}
+  </div>
+{% endif %}
+
+{% endblock %}
