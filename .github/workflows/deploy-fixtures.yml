@@ -1,0 +1,39 @@
+name: Refresh production fixtures
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - backend/data/fixtures.json
+  workflow_dispatch:
+
+concurrency:
+  group: production-data-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh-fixtures:
+    runs-on: [self-hosted, linux, x64, oketa-prod]
+
+    steps:
+      - name: Update deployed repo
+        run: |
+          set -euo pipefail
+          cd /home/deploy/oketa-cup
+          git fetch origin main
+          git checkout main
+          git merge --ff-only origin/main
+
+      - name: Ensure web uses latest image
+        run: |
+          set -euo pipefail
+          cd /home/deploy/oketa-cup
+          docker compose -f docker/docker-compose.prod.yml --env-file .env pull web
+          docker compose -f docker/docker-compose.prod.yml --env-file .env up -d web nginx
+
+      - name: Reload fixtures and rebuild bracket
+        run: |
+          set -euo pipefail
+          cd /home/deploy/oketa-cup
+          docker compose -f docker/docker-compose.prod.yml --env-file .env run --rm --no-deps web python manage.py load_fixtures --clear
+          docker compose -f docker/docker-compose.prod.yml --env-file .env run --rm --no-deps web python manage.py setup_bracket
