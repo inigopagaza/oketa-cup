@@ -1,0 +1,18 @@
+name: Runner smoke test
+
+on:
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    runs-on: [self-hosted, linux, x64, oketa-prod]
+    steps:
+      - name: Basic checks
+        run: |
+          set -euo pipefail
+          echo "Runner OK"
+          whoami
+          hostname
+          pwd
+          docker --version
+          docker compose version
