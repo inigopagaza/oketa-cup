@@ -225,6 +225,12 @@ lxc.cgroup2.devices.allow: a
 lxc.mount.auto: proc:rw sys:rw
 ```
 
+Modifica:
+
+```
+features: nesting=1,keyctl=1
+```
+
 Guarda y arranca el contenedor:
 ```bash
 pct start 100
@@ -820,6 +826,35 @@ docker compose -f docker/docker-compose.prod.yml exec web \
   python manage.py load_fixtures
 
 docker compose -f docker/docker-compose.prod.yml exec web \
+  python manage.py setup_bracket
+```
+
+### 9.5 Aplicar cambios de calendario ya desplegados
+
+Si el cambio está en `backend/data/fixtures.json` y ya has actualizado el código en el servidor, hay que recargar los partidos para que la base de datos recoja nuevos horarios y sedes:
+
+```bash
+cd /home/deploy/oketa-cup
+
+docker compose -f docker/docker-compose.prod.yml --env-file .env exec web \
+  python manage.py load_fixtures --clear
+
+docker compose -f docker/docker-compose.prod.yml --env-file .env exec web \
+  python manage.py setup_bracket
+```
+
+Si también cambiaste el catálogo de selecciones o quieres rehacer los datos base completos:
+
+```bash
+cd /home/deploy/oketa-cup
+
+docker compose -f docker/docker-compose.prod.yml --env-file .env exec web \
+  python manage.py load_teams
+
+docker compose -f docker/docker-compose.prod.yml --env-file .env exec web \
+  python manage.py load_fixtures --clear
+
+docker compose -f docker/docker-compose.prod.yml --env-file .env exec web \
   python manage.py setup_bracket
 ```
 
