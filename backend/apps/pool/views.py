@@ -1,13 +1,14 @@
 """Vistas de la app pool (stub inicial)."""
 
 from django.contrib.auth.decorators import login_required
+from django.db.models import Sum
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_POST
 
 from apps.tournament.models import Match, NationalTeam, TournamentConfig
 
-from .models import Participant
+from .models import Participant, ScoreLog
 
 
 @login_required
@@ -33,6 +34,36 @@ def dashboard(request: HttpRequest) -> HttpResponse:
         key=lambda p: p.total_points,
         reverse=True,
     )
+
+    # Precalcular puntos por selección para todos los participantes del ranking.
+    team_points_rows = (
+        ScoreLog.objects.filter(participant__in=ranking)
+        .values("participant_id", "team_id")
+        .annotate(total=Sum("points_earned"))
+    )
+    points_by_participant: dict[int, dict[int, int]] = {}
+    for row in team_points_rows:
+        points_by_participant.setdefault(row["participant_id"], {})[row["team_id"]] = (
+            row["total"]
+        )
+
+    ranking_rows = []
+    for ranked_participant in ranking:
+        team_points = points_by_participant.get(ranked_participant.id, {})
+        selections = [
+            {
+                "team": team,
+                "points": team_points.get(team.id, 0),
+            }
+            for team in ranked_participant.teams.all()
+        ]
+        selections.sort(key=lambda entry: entry["points"], reverse=True)
+        ranking_rows.append(
+            {
+                "participant": ranked_participant,
+                "selections": selections,
+            }
+        )
 
     # Partidos de hoy
     from django.utils import timezone
@@ -62,6 +93,7 @@ def dashboard(request: HttpRequest) -> HttpResponse:
         {
             "participant": participant,
             "ranking": ranking,
+            "ranking_rows": ranking_rows,
             "todays_matches": todays_matches,
             "team_scores": team_scores,
         },
