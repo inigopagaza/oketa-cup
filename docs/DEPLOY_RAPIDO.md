@@ -2,14 +2,64 @@
 
 Guia corta para desplegar cambios en produccion desde el servidor.
 
+## Atajo desde tu Mac (1 comando)
+
+Tambien puedes ejecutar el deploy remoto por SSH sin entrar manualmente al servidor.
+
+Opcion recomendada: alias SSH en tu Mac (`~/.ssh/config`):
+
+```sshconfig
+Host oketa-prod
+  HostName TU_IP_O_HOST
+  User deploy
+  Port 22
+  IdentityFile ~/.ssh/id_ed25519
+```
+
+Con eso, puedes lanzar directamente:
+
+```bash
+./scripts/deploy-code-ssh.sh
+./scripts/deploy-fixtures-ssh.sh
+```
+
+Alternativa 1 (variable de entorno, solo una vez por terminal):
+
+```bash
+export PROD_SSH_TARGET="deploy@TU_IP_O_HOST"
+# opcional si no usas la ruta por defecto
+export PROD_APP_DIR="/home/deploy/oketa-cup"
+```
+
+Alternativa 2 (pasando destino por argumento):
+
+```bash
+./scripts/deploy-code-ssh.sh deploy@TU_IP_O_HOST
+./scripts/deploy-fixtures-ssh.sh deploy@TU_IP_O_HOST
+```
+
+Si la ruta remota del repo no es la estandar, pasa un segundo argumento:
+
+```bash
+./scripts/deploy-code-ssh.sh oketa-prod /home/deploy/oketa-cup
+./scripts/deploy-fixtures-ssh.sh oketa-prod /home/deploy/oketa-cup
+```
+
+Via `make`:
+
+```bash
+make deploy-code-ssh
+make deploy-fixtures-ssh
+```
+
 ## Cuándo usar esto
 
 - Hay cambios en GitHub y quieres aplicarlos en el servidor manualmente.
-- El deploy automatico no ha corrido o ha fallado.
+- Quieres desplegar sin depender de workflows de deploy en GitHub Actions.
 
 ## Requisitos
 
-- Estar en el servidor (usuario `deploy`).
+- Tener acceso SSH al servidor (usuario `deploy`).
 - Tener el repo en `/home/deploy/oketa-cup`.
 - Tener `.env` en la raiz del repo.
 
