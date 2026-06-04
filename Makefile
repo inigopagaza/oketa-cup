@@ -15,7 +15,7 @@ COMPOSE      := docker compose -f docker/docker-compose.yml
 ENV_FILE     := backend/.env
 MANAGE       := $(COMPOSE) exec backend python manage.py
 
-.PHONY: up up-d down db logs shell migrate makemigrations test load-fixtures createsuperuser
+.PHONY: up up-d down db logs shell migrate makemigrations test load-fixtures createsuperuser deploy-code-ssh deploy-fixtures-ssh
 
 ## ── Ciclo de vida ─────────────────────────────────────────────────────────
 
@@ -60,3 +60,9 @@ test:
 ## ── Producción (servidor) ─────────────────────────────────────────────────
 ## En producción las variables vienen del entorno del servidor, no de --env-file.
 ## El deploy en GitHub Actions inyecta los secretos vía SSH / docker compose.prod.yml.
+
+deploy-code-ssh:
+	./scripts/deploy-code-ssh.sh
+
+deploy-fixtures-ssh:
+	./scripts/deploy-fixtures-ssh.sh

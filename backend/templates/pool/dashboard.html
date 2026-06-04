@@ -2,6 +2,10 @@
 {% load i18n %}
 {% block title %}{% trans "Dashboard" %} · OketaCup{% endblock %}
 
+{% block extra_head %}
+<style>[x-cloak] { display: none !important; }</style>
+{% endblock %}
+
 {% block content %}
 
 <div class="space-y-8">
@@ -115,21 +119,111 @@
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
-          {% for p in ranking %}
+          {% for row in ranking_rows %}
+            {% with p=row.participant %}
             <tr class="{% if p.user == request.user %}bg-green-50 dark:bg-green-900/10 font-semibold{% endif %}">
               <td class="py-2.5 pr-3 text-gray-400 tabular-nums">{{ forloop.counter }}</td>
-              <td class="py-2.5 pr-3">
-                {{ p.user.username }}
+              <td class="py-2.5 pr-3" x-data="{ open: false }">
+                <button
+                  type="button"
+                  class="text-left hover:text-green-600 dark:hover:text-green-400 underline-offset-2 hover:underline"
+                  @click="open = !open"
+                  @keydown.escape.window="open = false"
+                >
+                  {{ p.user.username }}
+                </button>
                 {% if p.user == request.user and not request.user.is_staff %}<span class="text-green-600 dark:text-green-400 text-xs ml-1">&larr; t&uacute;</span>{% endif %}
+
+                <template x-teleport="body">
+                  <div
+                    x-cloak
+                    x-show="open"
+                    x-transition.opacity
+                    class="fixed inset-0 z-50"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-label="Detalle de participante"
+                  >
+                    <div
+                      class="absolute inset-0 bg-gray-950/50"
+                      @click="open = false"
+                    ></div>
+
+                    <div class="relative z-10 min-h-screen flex items-center justify-center p-4">
+                      <div
+                        x-transition
+                        class="w-full max-w-md rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-2xl"
+                      >
+                        <div class="px-4 py-3 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between gap-3">
+                          <h3 class="font-semibold text-sm text-gray-700 dark:text-gray-200">
+                            {{ p.user.username }}
+                          </h3>
+                          <button
+                            type="button"
+                            class="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-lg leading-none"
+                            @click="open = false"
+                            aria-label="Cerrar"
+                          >
+                            ×
+                          </button>
+                        </div>
+
+                        <div class="p-4 max-h-[70vh] overflow-y-auto">
+                          <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">{% trans "Selecciones" %}</p>
+
+                          {% if row.selections %}
+                            <ul class="space-y-1.5">
+                              {% for entry in row.selections %}
+                                <li class="flex items-center justify-between text-xs gap-2">
+                                  <span class="flex items-center gap-1.5 min-w-0">
+                                    <span>{{ entry.team.flag_emoji }}</span>
+                                    <span class="truncate">{{ entry.team.name }}</span>
+                                  </span>
+                                  <span class="font-semibold text-green-600 dark:text-green-400 tabular-nums">+{{ entry.points }}✨</span>
+                                </li>
+                              {% endfor %}
+                            </ul>
+                          {% else %}
+                            <p class="text-xs text-gray-400">{% trans "Sin selecciones todavía." %}</p>
+                          {% endif %}
+
+                          <div class="mt-3 pt-2 border-t border-gray-100 dark:border-gray-700 space-y-1">
+                            <p class="text-[11px] text-gray-500 dark:text-gray-400">
+                              🏅 <span class="font-medium">{% trans "MVP" %}:</span> {{ p.predicted_mvp|default:"—" }}
+                            </p>
+                            <p class="text-[11px] text-gray-500 dark:text-gray-400">
+                              ⚽ <span class="font-medium">{% trans "Pichichi" %}:</span> {{ p.predicted_top_scorer|default:"—" }}
+                            </p>
+                            <p class="text-[11px] text-gray-500 dark:text-gray-400">
+                              🧤 <span class="font-medium">{% trans "Zamora" %}:</span> {{ p.predicted_best_goalkeeper|default:"—" }}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div class="px-4 py-3 border-t border-gray-100 dark:border-gray-700 flex justify-end">
+                          <button
+                            type="button"
+                            class="btn-secondary text-sm"
+                            @click="open = false"
+                          >
+                            {% trans "Cerrar" %}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </template>
               </td>
               <td class="py-2.5 text-right font-bold text-green-600 dark:text-green-400 tabular-nums">
                 {{ p.total_points }}✨
               </td>
             </tr>
+            {% endwith %}
           {% endfor %}
         </tbody>
       </table>
     </div>
+    <p class="text-xs text-gray-400 mt-2">{% trans "Haz click en un participante para ver sus selecciones y puntos por equipo." %}</p>
     <p class="text-xs text-gray-400 mt-3 text-right">
       <a href="{% url 'tournament:results' %}" class="hover:text-green-600 transition-colors">Ver resultados del Mundial →</a>
     </p>

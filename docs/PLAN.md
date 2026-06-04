@@ -503,7 +503,7 @@ Guía paso a paso completa: [`docs/DEPLOY.md`](DEPLOY.md)
 - [ ] Proxmox VE instalado + LXC Ubuntu 22.04 con Docker
 - [ ] Cloudflare Tunnel (acceso externo sin abrir puertos, SSL automático)
 - [ ] Dominio gratuito (DuckDNS o EU.org) vinculado a Cloudflare
-- [ ] GitHub Actions `deploy.yml`: push a `main` → SSH al servidor → `docker compose up -d`
+- [ ] Scripts de deploy manual por SSH desde Mac (`make deploy-code-ssh` y `make deploy-fixtures-ssh`)
 - [ ] Backups automáticos de PostgreSQL con `pg_dump` + cron
 - [ ] Firewall (UFW) + fail2ban en el servidor
 

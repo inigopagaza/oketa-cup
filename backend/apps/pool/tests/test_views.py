@@ -10,7 +10,7 @@ Cubre el flujo de selección de equipos:
 import pytest
 from django.urls import reverse
 
-from apps.pool.models import Participant
+from apps.pool.models import Participant, ScoreLog
 from apps.tournament.models import NationalTeam
 
 # ── Fixtures locales ──────────────────────────────────────────────────────────
@@ -75,6 +75,44 @@ class TestDashboardView:
         client.force_login(user_bob)
         resp = client.get(reverse(self.URL))
         assert resp.status_code == 200
+
+    def test_contexto_ranking_rows_incluye_selecciones_y_puntos(
+        self, client, user_bob, team_cheap, tournament_config
+    ):
+        from apps.accounts.models import User
+
+        user_bob.has_confirmed_selection = True
+        user_bob.save()
+        Participant.objects.create(user=user_bob)
+
+        user_ana = User.objects.create_user(
+            username="ana_views", password="testpass123"
+        )
+        participant_ana = Participant.objects.create(user=user_ana)
+        participant_ana.teams.add(team_cheap)
+        ScoreLog.objects.create(
+            participant=participant_ana,
+            team=team_cheap,
+            match=None,
+            points_earned=7,
+            reason="Test puntos",
+        )
+
+        client.force_login(user_bob)
+        resp = client.get(reverse(self.URL))
+
+        assert resp.status_code == 200
+        assert "ranking_rows" in resp.context
+
+        ana_rows = [
+            row
+            for row in resp.context["ranking_rows"]
+            if row["participant"].user.username == "ana_views"
+        ]
+        assert len(ana_rows) == 1
+        assert len(ana_rows[0]["selections"]) == 1
+        assert ana_rows[0]["selections"][0]["team"] == team_cheap
+        assert ana_rows[0]["selections"][0]["points"] == 7
 
 
 # ── Selección de equipos ──────────────────────────────────────────────────────

@@ -1,10 +1,10 @@
 # Guía de Despliegue — OketaCup
 
 > **Nivel**: Principiante total en producción
-> **Objetivo**: App accesible desde internet, segura, con deploy automático
+> **Objetivo**: App accesible desde internet, segura, con deploy manual por SSH
 > **Stack**: Proxmox VE → LXC Ubuntu 22.04 → Docker → Nginx + Gunicorn + PostgreSQL → Cloudflare Tunnel
 > **Dominio**: opciones gratuitas (EU.org o DuckDNS) y opción de pago rápida (.eus en dinahosting)
-> **CI/CD**: GitHub Actions → SSH → `docker compose pull && up -d`
+> **CI/CD**: GitHub Actions para CI (tests) + deploy manual por SSH
 
 ---
 
@@ -555,14 +555,13 @@ jobs:
 
 ---
 
-## PASO 7 — GitHub Actions: deploy automático
+## PASO 7 — Deploy manual por SSH (desde tu Mac)
 
-### 7.1 Generar clave SSH para el deploy
+### 7.1 Generar clave SSH para deploy
 
 En tu Mac:
 ```bash
-ssh-keygen -t ed25519 -C "github-deploy@oketa-cup" -f ~/.ssh/oketa_deploy
-# Pulsa Enter (sin passphrase para que GitHub Actions pueda usarla)
+ssh-keygen -t ed25519 -C "deploy@oketa-cup" -f ~/.ssh/oketa_deploy
 ```
 
 ### 7.2 Autorizar la clave en el servidor
@@ -576,60 +575,33 @@ echo "CONTENIDO_DE_oketa_deploy.pub" >> ~/.ssh/authorized_keys
 chmod 600 ~/.ssh/authorized_keys
 ```
 
-### 7.3 Añadir secretos en GitHub
+### 7.3 Configurar alias SSH local
 
-Ve a tu repositorio → **Settings** → **Secrets and variables** → **Actions** → **New repository secret**:
+En tu Mac, edita `~/.ssh/config`:
 
-| Nombre | Valor |
-|---|---|
-| `DEPLOY_HOST` | `192.168.1.Y` (IP del LXC) |
-| `DEPLOY_USER` | `deploy` |
-| `DEPLOY_KEY` | contenido de `~/.ssh/oketa_deploy` (la clave privada) |
-| `POSTGRES_PASSWORD` | contraseña generada con `openssl rand -base64 32` |
-| `DJANGO_SECRET_KEY` | clave generada con `openssl rand -base64 50` |
-| `CLOUDFLARE_TUNNEL_TOKEN` | (lo obtienes en el Paso 8) |
-
-### 7.4 Workflow de deploy
-
-```yaml
-# .github/workflows/deploy.yml
-name: Deploy to production
-
-on:
-  push:
-    branches: [main]
-
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    needs: []   # añade aquí el job de tests si quieres que pasen primero
-
-    steps:
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.DEPLOY_HOST }}
-          username: ${{ secrets.DEPLOY_USER }}
-          key: ${{ secrets.DEPLOY_KEY }}
-          script: |
-            set -e
-            cd /home/deploy/oketa-cup
-
-            # Actualizar el código
-            git pull origin main
-
-            # Descargar la nueva imagen
-            docker compose -f docker/docker-compose.prod.yml pull
-
-            # Aplicar migraciones y reiniciar
-            docker compose -f docker/docker-compose.prod.yml run --rm web \
-              python manage.py migrate --noinput
-
-            # Reiniciar servicios
-            docker compose -f docker/docker-compose.prod.yml up -d --remove-orphans
-
-            echo "Deploy completado ✓"
+```sshconfig
+Host oketa-prod
+  HostName 192.168.1.Y
+  User deploy
+  Port 22
+  IdentityFile ~/.ssh/oketa_deploy
 ```
+
+### 7.4 Ejecutar deploy con un comando
+
+Desde la raiz del repo local:
+
+```bash
+make deploy-code-ssh
+```
+
+Para recargar fixtures:
+
+```bash
+make deploy-fixtures-ssh
+```
+
+Comandos y variantes documentadas en `docs/DEPLOY_RAPIDO.md`.
 
 ---
 
@@ -673,7 +645,7 @@ Arrancar el contenedor `cloudflared` ya está incluido en el `docker-compose.pro
 
 ### Checklist rápida (10 minutos) para `.eus` + Cloudflare
 
-Usa esta lista antes del primer deploy automático:
+Usa esta lista antes del primer deploy manual:
 
 - [ ] El dominio `.eus` aparece como **Active** en Cloudflare
 - [ ] En dinahosting, los nameservers del dominio son exactamente los 2 de Cloudflare
@@ -772,7 +744,7 @@ Let's Encrypt caduca cada 90 días, renueva automáticamente:
 
 ## PASO 9 — Primer despliegue manual
 
-Haz esto una vez para arrancar todo. Los siguientes serán automáticos vía GitHub Actions.
+Haz esto una vez para arrancar todo. Los siguientes puedes hacerlos manualmente por SSH con los scripts del repo.
 
 ### 9.1 En el LXC (como usuario `deploy`)
 
@@ -950,7 +922,7 @@ En la interfaz web de Proxmox:
 - [ ] Los backups diarios están programados (`crontab -l`)
 - [ ] fail2ban está activo (`fail2ban-client status sshd`)
 - [ ] UFW está activo (`ufw status`)
-- [ ] El deploy automático funciona: haz un commit en `main` y verifica que GitHub Actions lo despliega
+- [ ] El deploy manual por SSH funciona: ejecuta `make deploy-code-ssh` desde tu Mac y verifica cambios
 - [ ] Los logs no muestran errores: `docker compose logs --tail=50`
 
 ---
@@ -975,7 +947,7 @@ gunzip -c /home/deploy/backups/oketa_cup_20260611_030000.sql.gz | \
   docker compose -f docker/docker-compose.prod.yml exec -T db \
   psql -U oketa oketa_cup
 
-# Actualizar manualmente (sin esperar a GitHub Actions)
+# Actualizar manualmente por SSH
 cd /home/deploy/oketa-cup
 git pull origin main
 docker compose -f docker/docker-compose.prod.yml pull
@@ -993,4 +965,4 @@ docker compose -f docker/docker-compose.prod.yml up -d
 | Cloudflare Tunnel desconectado | Token incorrecto | Verificar `CLOUDFLARE_TUNNEL_TOKEN` |
 | `DisallowedHost` en Django | ALLOWED_HOSTS incompleto | Añadir el dominio a `.env` |
 | Docker no arranca en LXC | Falta configuración nesting | Verificar `/etc/pve/lxc/100.conf` |
-| GitHub Actions falla al hacer SSH | Clave SSH incorrecta | Regenerar y añadir de nuevo |
+| SSH falla desde tu Mac | Clave SSH o alias incorrecto | Revisar `~/.ssh/config` y `authorized_keys` |
