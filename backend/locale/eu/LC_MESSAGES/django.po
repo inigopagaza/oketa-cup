@@ -67,14 +67,74 @@ msgstr "Zure puntu guztiak:"
 msgid "Mis selecciones"
 msgstr "Nire taldeak"
 
+msgid "Selecciones"
+msgstr "Hautatutakoak"
+
+msgid "Últimos puntos"
+msgstr "Azken puntuak"
+
+msgid "Todavía no tienes movimientos de puntos."
+msgstr "Oraindik ez duzu puntuen mugimendurik."
+
+msgid "Premio o ajuste manual"
+msgstr "Saria edo eskuzko doikuntza"
+
+msgid "Historial de puntos"
+msgstr "Puntuen historia"
+
+msgid "Sin selecciones todavía."
+msgstr "Oraindik ez dago hautaketarik."
+
+msgid "Todavía no tiene registros de puntos."
+msgstr "Oraindik ez du puntuen erregistrorik."
+
 msgid "No tienes equipos seleccionados."
 msgstr "Ez daukazu talderik hautatuta."
+
+msgid "Victoria vs %(rival)s"
+msgstr "Garaipena %(rival)s-ren aurka"
+
+msgid "Empate vs %(rival)s"
+msgstr "Berdinketa %(rival)s-ren aurka"
+
+msgid "Derrota vs %(rival)s"
+msgstr "Porrota %(rival)s-ren aurka"
+
+msgid "Clasificado desde grupo %(group)s"
+msgstr "%(group)s multzotik sailkatua"
+
+msgid "1º de grupo %(group)s"
+msgstr "%(group)s multzoko 1. postua"
+
+msgid "Clasificado a %(phase)s"
+msgstr "%(phase)s-rako sailkatua"
+
+msgid "3er puesto"
+msgstr "3. postua"
+
+msgid "¡Campeón del Mundial!"
+msgstr "Mundialeko txapelduna!"
+
+msgid "Acertó el MVP del torneo"
+msgstr "Txapelketako MVP-a asmatu du"
+
+msgid "Acertó el Pichichi"
+msgstr "Pichichi asmatu du"
+
+msgid "Acertó el Zamora"
+msgstr "Zamora asmatu du"
+
+msgid "Punto manual o premio"
+msgstr "Eskuzko puntua edo saria"
 
 msgid "Partidos de hoy"
 msgstr "Gaurko partidak"
 
 msgid "No hay partidos hoy."
 msgstr "Gaur ez dago partidarik."
+
+msgid "Haz click en un participante para ver sus selecciones y puntos por equipo."
+msgstr "Egin klik parte-hartzaile batean bere hautaketak eta talde bakoitzeko puntuak ikusteko."
 
 msgid "Clasificación"
 msgstr "Sailkapena"
@@ -268,6 +328,33 @@ msgstr "Zuzendu"
 msgid "Premios individuales (MVP, Pichichi, Zamora)"
 msgstr "Banakako sariak (MVP, Pichichi, Zamora)"
 
+msgid "Ganador por penaltis"
+msgstr "Penaltietan garailea"
+
+msgid "Resuelto en 90 minutos"
+msgstr "90 minututan ebatzi da"
+
+msgid "Cómo se resolvió el partido"
+msgstr "Nola ebatzi zen partida"
+
+msgid "Ganador en 90'"
+msgstr "Garailea 90'etan"
+
+msgid "Prórroga / penaltis"
+msgstr "Luzapena / penaltia"
+
+msgid "Sin penaltis"
+msgstr "Penaltirik gabe"
+
+msgid "Pen. local"
+msgstr "Pen. bertakoa"
+
+msgid "Pen. visitante"
+msgstr "Pen. kanpokoa"
+
+msgid "Ganador por penaltis (solo si empate)"
+msgstr "Penaltietako garailea (berdinketa bada bakarrik)"
+
 msgid "MVP real del torneo"
 msgstr "Txapelketako MVP erreala"
 
@@ -343,9 +430,6 @@ msgstr "Zortzirenak"
 
 msgid "Cuartos"
 msgstr "Laurdenak"
-
-msgid "3er puesto"
-msgstr "3. postua"
 
 msgid "No hay partidos eliminatorios cargados todavía."
 msgstr "Oraindik ez daude kanporaketa-partidarik kargatuta."

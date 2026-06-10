@@ -64,6 +64,10 @@ class Match(models.Model):
         THIRD_PLACE = "3PL", "Tercer puesto"
         FINAL = "FIN", "Final"
 
+    class PenaltiesWinner(models.TextChoices):
+        HOME = "home", "Local"
+        AWAY = "away", "Visitante"
+
     home_team = models.ForeignKey(
         NationalTeam,
         on_delete=models.SET_NULL,
@@ -112,6 +116,19 @@ class Match(models.Model):
         null=True,
         blank=True,
         verbose_name="Goles visitante",
+    )
+    penalties_winner = models.CharField(
+        max_length=4,
+        choices=PenaltiesWinner,
+        blank=True,
+        default="",
+        verbose_name="Ganador por penaltis",
+        help_text="Solo para eliminatorias cuando hay empate en el marcador",
+    )
+    decided_in_90 = models.BooleanField(
+        default=True,
+        verbose_name="Resuelto en 90 minutos",
+        help_text="Solo para eliminatorias: si es False, victoria por prórroga o penaltis",
     )
     is_finished = models.BooleanField(
         default=False,
@@ -163,6 +180,25 @@ class Match(models.Model):
         if not self.is_finished or self.home_score is None or self.away_score is None:
             return False
         return self.home_score == self.away_score
+
+    @property
+    def knockout_winner(self) -> NationalTeam | None:
+        """Ganador en eliminatoria, incluyendo penaltis si el marcador fue empate."""
+        if not self.is_finished:
+            return None
+        if self.phase == Match.Phase.GROUP:
+            return None
+        if self.home_score is None or self.away_score is None:
+            return None
+        if self.home_score > self.away_score:
+            return self.home_team
+        if self.away_score > self.home_score:
+            return self.away_team
+        if self.penalties_winner == Match.PenaltiesWinner.HOME:
+            return self.home_team
+        if self.penalties_winner == Match.PenaltiesWinner.AWAY:
+            return self.away_team
+        return None
 
 
 class TournamentConfig(models.Model):

@@ -7,8 +7,67 @@ histórico de puntos obtenidos.
 
 from django.conf import settings
 from django.db import models
+from django.utils.translation import gettext as _
 
 from apps.tournament.models import Match, NationalTeam
+
+# ── Códigos de motivo para ScoreLog ──────────────────────────────────────────
+
+REASON_MATCH_WIN = "match_win"
+REASON_MATCH_DRAW = "match_draw"
+REASON_MATCH_LOSS = "match_loss"
+REASON_GROUP_ADVANCE = "group_advance"
+REASON_GROUP_FIRST = "group_first"
+REASON_ADVANCE_PHASE = "advance_phase"
+REASON_THIRD_PLACE = "third_place"
+REASON_CHAMPION = "champion"
+REASON_MVP = "mvp"
+REASON_TOP_SCORER = "top_scorer"
+REASON_BEST_GOALKEEPER = "best_goalkeeper"
+
+
+def render_scorelog_reason(
+    reason_code: str,
+    reason_context: dict | None = None,
+    fallback_reason: str = "",
+) -> str:
+    """Devuelve el motivo del ScoreLog en el idioma activo."""
+    context = reason_context or {}
+
+    if not reason_code:
+        return fallback_reason
+
+    if reason_code == REASON_MATCH_WIN:
+        return _("Victoria vs %(rival)s") % {"rival": context.get("rival", "")}
+    if reason_code == REASON_MATCH_DRAW:
+        return _("Empate vs %(rival)s") % {"rival": context.get("rival", "")}
+    if reason_code == REASON_MATCH_LOSS:
+        return _("Derrota vs %(rival)s") % {"rival": context.get("rival", "")}
+    if reason_code == REASON_GROUP_ADVANCE:
+        return _("Clasificado desde grupo %(group)s") % {
+            "group": context.get("group", "")
+        }
+    if reason_code == REASON_GROUP_FIRST:
+        return _("1º de grupo %(group)s") % {"group": context.get("group", "")}
+    if reason_code == REASON_ADVANCE_PHASE:
+        phase_value = context.get("phase", "")
+        try:
+            phase_label = _(str(Match.Phase(phase_value).label)) if phase_value else ""
+        except ValueError:
+            phase_label = str(phase_value)
+        return _("Clasificado a %(phase)s") % {"phase": phase_label}
+    if reason_code == REASON_THIRD_PLACE:
+        return _("3er puesto")
+    if reason_code == REASON_CHAMPION:
+        return _("¡Campeón del Mundial!")
+    if reason_code == REASON_MVP:
+        return _("Acertó el MVP del torneo")
+    if reason_code == REASON_TOP_SCORER:
+        return _("Acertó el Pichichi")
+    if reason_code == REASON_BEST_GOALKEEPER:
+        return _("Acertó el Zamora")
+
+    return fallback_reason
 
 
 class Participant(models.Model):
@@ -97,6 +156,20 @@ class ScoreLog(models.Model):
         help_text="Nulo para puntos de premios individuales o avance de fase",
     )
     points_earned = models.SmallIntegerField(verbose_name="Puntos obtenidos")
+    reason_code = models.CharField(
+        max_length=50,
+        blank=True,
+        default="",
+        db_index=True,
+        verbose_name="Código del motivo",
+        help_text="Identificador estable para traducir el motivo.",
+    )
+    reason_context = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name="Contexto del motivo",
+        help_text="Datos auxiliares para construir el motivo traducido.",
+    )
     reason = models.CharField(
         max_length=200,
         verbose_name="Motivo",
@@ -110,4 +183,13 @@ class ScoreLog(models.Model):
         ordering = ["-created_at"]
 
     def __str__(self) -> str:
-        return f"{self.participant} +{self.points_earned}pts — {self.reason}"
+        return f"{self.participant} +{self.points_earned}pts — {self.display_reason}"
+
+    @property
+    def display_reason(self) -> str:
+        """Motivo del punto traducido al idioma activo."""
+        return render_scorelog_reason(
+            self.reason_code,
+            self.reason_context,
+            self.reason,
+        )

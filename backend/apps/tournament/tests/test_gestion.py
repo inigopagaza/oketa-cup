@@ -222,6 +222,23 @@ class TestPropagateBracketSignal:
         r16_match.refresh_from_db()
         assert r16_match.home_team is None
 
+    def test_empate_con_penaltis_si_propaga(self, team_a, team_b, r32_match, r16_match):
+        """Si hay empate y ganador por penaltis, sí debe propagarse."""
+        r32_match.home_team = team_a
+        r32_match.away_team = team_b
+        r32_match.next_match = r16_match
+        r32_match.next_match_slot = "home"
+        r32_match.save()
+
+        r32_match.home_score = 1
+        r32_match.away_score = 1
+        r32_match.penalties_winner = Match.PenaltiesWinner.AWAY
+        r32_match.is_finished = True
+        r32_match.save()
+
+        r16_match.refresh_from_db()
+        assert r16_match.home_team == team_b
+
     def test_grupo_no_propaga(self, team_a, team_b, r16_match):
         """Partidos de grupos no activan propagación de bracket."""
         group_match = Match.objects.create(
