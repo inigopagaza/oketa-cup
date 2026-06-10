@@ -42,8 +42,8 @@ services:
     restart: unless-stopped
     command: >
       sh -c "uv sync --frozen &&
-             python manage.py migrate &&
-             python manage.py runserver 0.0.0.0:8000"
+             uv run python manage.py migrate &&
+             uv run python manage.py runserver 0.0.0.0:8000"
     volumes:
       # Monta el código local para ver cambios sin reconstruir la imagen
       - ../backend:/app
