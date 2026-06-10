@@ -7,6 +7,7 @@ import logging
 import re
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from typing import Any, cast
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
@@ -528,6 +529,6 @@ class FootballDataSyncService:
         if value is None:
             return None
         try:
-            return int(value)
+            return int(cast(Any, value))
         except (TypeError, ValueError):
             return None
