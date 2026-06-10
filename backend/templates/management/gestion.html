@@ -56,6 +56,21 @@
             <input type="number" name="away_score" min="0" max="99" placeholder="0"
                    value="{% if match.away_score is not None %}{{ match.away_score }}{% endif %}"
                    class="w-14 text-center border border-gray-300 dark:border-gray-600 rounded-md px-2 py-1 bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-400" required>
+            {% if match.phase != 'GRP' %}
+            <select name="decided_in_90"
+                class="text-xs border border-gray-300 dark:border-gray-600 rounded-md px-2 py-1 bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-400"
+                title="{% trans 'Cómo se resolvió el partido' %}">
+              <option value="1" {% if match.decided_in_90 %}selected{% endif %}>{% trans 'Ganador en 90\'' %}</option>
+              <option value="0" {% if not match.decided_in_90 %}selected{% endif %}>{% trans 'Prórroga / penaltis' %}</option>
+            </select>
+            <select name="penalties_winner"
+                    class="text-xs border border-gray-300 dark:border-gray-600 rounded-md px-2 py-1 bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-400"
+                    title="{% trans 'Ganador por penaltis (solo si empate)' %}">
+              <option value="">{% trans 'Sin penaltis' %}</option>
+              <option value="home" {% if match.penalties_winner == 'home' %}selected{% endif %}>{% trans 'Pen. local' %}</option>
+              <option value="away" {% if match.penalties_winner == 'away' %}selected{% endif %}>{% trans 'Pen. visitante' %}</option>
+            </select>
+            {% endif %}
             <label class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 cursor-pointer select-none">
               <input type="checkbox" name="is_finished" value="1" class="rounded accent-orange-500">
               {% trans "Finalizado" %}
@@ -106,6 +121,21 @@
           <input type="number" name="away_score" min="0" max="99" placeholder="0"
                  value="{{ match.away_score }}"
                  class="w-14 text-center border border-gray-300 dark:border-gray-600 rounded-md px-2 py-1 bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-400" required>
+          {% if match.phase != 'GRP' %}
+              <select name="decided_in_90"
+              class="text-xs border border-gray-300 dark:border-gray-600 rounded-md px-2 py-1 bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-400"
+              title="{% trans 'Cómo se resolvió el partido' %}">
+            <option value="1" {% if match.decided_in_90 %}selected{% endif %}>{% trans 'Ganador en 90\'' %}</option>
+            <option value="0" {% if not match.decided_in_90 %}selected{% endif %}>{% trans 'Prórroga / penaltis' %}</option>
+              </select>
+          <select name="penalties_winner"
+                  class="text-xs border border-gray-300 dark:border-gray-600 rounded-md px-2 py-1 bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-400"
+                  title="{% trans 'Ganador por penaltis (solo si empate)' %}">
+            <option value="">{% trans 'Sin penaltis' %}</option>
+            <option value="home" {% if match.penalties_winner == 'home' %}selected{% endif %}>{% trans 'Pen. local' %}</option>
+            <option value="away" {% if match.penalties_winner == 'away' %}selected{% endif %}>{% trans 'Pen. visitante' %}</option>
+          </select>
+          {% endif %}
           <label class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 cursor-pointer select-none">
             <input type="checkbox" name="is_finished" value="1" class="rounded accent-orange-500" checked>
             {% trans "Finalizado" %}

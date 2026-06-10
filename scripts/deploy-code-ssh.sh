@@ -26,11 +26,20 @@ git merge --ff-only origin/main
 
 echo "[remote] Pull containers and deploy"
 docker compose -f docker/docker-compose.prod.yml --env-file .env pull
-docker compose -f docker/docker-compose.prod.yml --env-file .env run --rm --no-deps web python manage.py migrate --noinput
+docker compose -f docker/docker-compose.prod.yml --env-file .env run --rm --no-deps -T web python manage.py migrate --noinput < /dev/null
+docker compose -f docker/docker-compose.prod.yml --env-file .env down
 docker compose -f docker/docker-compose.prod.yml --env-file .env up -d --force-recreate --remove-orphans
 
 echo "[remote] Quick status"
 docker compose -f docker/docker-compose.prod.yml --env-file .env ps
+
+echo "[remote] Container timestamps"
+for service in web nginx db cloudflared; do
+  container_id="$(docker compose -f docker/docker-compose.prod.yml --env-file .env ps -q "$service" || true)"
+  if [[ -n "$container_id" ]]; then
+    docker inspect --format '  {{.Name}} | created={{.Created}} | status={{.State.Status}} | started={{.State.StartedAt}}' "$container_id"
+  fi
+done
 EOF
 
 echo "[deploy-code] OK"

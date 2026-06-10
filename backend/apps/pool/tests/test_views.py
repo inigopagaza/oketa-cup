@@ -95,6 +95,8 @@ class TestDashboardView:
             team=team_cheap,
             match=None,
             points_earned=7,
+            reason_code="test_points",
+            reason_context={"detail": "test"},
             reason="Test puntos",
         )
 
@@ -113,6 +115,46 @@ class TestDashboardView:
         assert len(ana_rows[0]["selections"]) == 1
         assert ana_rows[0]["selections"][0]["team"] == team_cheap
         assert ana_rows[0]["selections"][0]["points"] == 7
+        assert len(ana_rows[0]["score_logs"]) == 1
+        assert ana_rows[0]["score_logs"][0].reason == "Test puntos"
+        assert ana_rows[0]["score_logs"][0].display_reason == "Test puntos"
+
+    def test_contexto_incluye_ultimos_score_logs(
+        self, client, user_bob, team_cheap, tournament_config
+    ):
+        from apps.accounts.models import User
+
+        user_bob.has_confirmed_selection = True
+        user_bob.save()
+        Participant.objects.create(user=user_bob)
+
+        user_ana = User.objects.create_user(
+            username="ana_recent", password="testpass123"
+        )
+        user_ana.has_confirmed_selection = True
+        user_ana.save()
+        participant_ana = Participant.objects.create(user=user_ana)
+        participant_ana.teams.add(team_cheap)
+        ScoreLog.objects.create(
+            participant=participant_ana,
+            team=team_cheap,
+            match=None,
+            points_earned=4,
+            reason_code="recent_points",
+            reason_context={"detail": "recent"},
+            reason="Historial reciente",
+        )
+
+        client.force_login(user_ana)
+        resp = client.get(reverse(self.URL))
+
+        assert resp.status_code == 200
+        assert "recent_score_logs" in resp.context
+        assert len(resp.context["recent_score_logs"]) == 1
+        assert resp.context["recent_score_logs"][0].reason == "Historial reciente"
+        assert (
+            resp.context["recent_score_logs"][0].display_reason == "Historial reciente"
+        )
 
 
 # ── Selección de equipos ──────────────────────────────────────────────────────

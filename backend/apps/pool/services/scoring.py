@@ -11,10 +11,13 @@ Reglas de puntuación:
         +6 por clasificar (top 2 o mejor tercero)
         +2 por quedar primero de grupo
     Fases eliminatorias:
+        +3 por victoria solo si se resuelve en 90'
+        +1 si se resuelve en prórroga o penaltis (se considera empate)
         +10 por clasificar a octavos
         +15 por clasificar a cuartos
         +20 por clasificar a semifinales
         +25 por clasificar a la final
+        +10 por quedar tercero
         +25 por ganar el Mundial
     Premios individuales (al finalizar el torneo):
         +20 por acertar el MVP
@@ -26,7 +29,19 @@ import logging
 
 from apps.tournament.models import Match, NationalTeam
 
-from ..models import Participant, ScoreLog
+from ..models import (
+    REASON_ADVANCE_PHASE,
+    REASON_CHAMPION,
+    REASON_GROUP_ADVANCE,
+    REASON_GROUP_FIRST,
+    REASON_MATCH_DRAW,
+    REASON_MATCH_LOSS,
+    REASON_MATCH_WIN,
+    REASON_THIRD_PLACE,
+    Participant,
+    ScoreLog,
+    render_scorelog_reason,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +55,8 @@ POINTS_ROUND_OF_16 = 10
 POINTS_QUARTER_FINAL = 15
 POINTS_SEMI_FINAL = 20
 POINTS_FINAL = 25
-POINTS_CHAMPION = 25
+POINTS_THIRD_PLACE = 10
+POINTS_CHAMPION = 30
 POINTS_MVP = 20
 POINTS_TOP_SCORER = 10
 POINTS_BEST_GOALKEEPER = 5
@@ -89,16 +105,22 @@ def process_match_result(match: Match) -> list[ScoreLog]:
             if points == 0:
                 continue
 
-            reason = _build_match_reason(match, team, points)
+            reason_code, reason_context, reason = _build_match_reason_payload(
+                match, team, points
+            )
             log = ScoreLog.objects.create(
                 participant=participant,
                 team=team,
                 match=match,
                 points_earned=points,
+                reason_code=reason_code,
+                reason_context=reason_context,
                 reason=reason,
             )
             created_logs.append(log)
             logger.debug("ScoreLog creado: %s", log)
+
+    created_logs.extend(_award_post_match_bonuses(match))
 
     return created_logs
 
@@ -170,13 +192,7 @@ def process_group_completion(group: str) -> list[ScoreLog]:
     # ── Idempotencia: borrar logs previos de clasificación de este grupo ──
     advance_reason = f"Clasificado desde grupo {group}"
     top_reason = f"1\u00ba de grupo {group}"
-    del1, _ = ScoreLog.objects.filter(reason=advance_reason).delete()
-    del2, _ = ScoreLog.objects.filter(reason=top_reason).delete()
-    deleted = del1 + del2
-    if deleted:
-        logger.info(
-            "Grupo %s: %d logs de clasificación previos eliminados.", group, deleted
-        )
+    _delete_group_classification_logs(group)
 
     # ── Crear los nuevos logs ─────────────────────────────────────────────
     created: list[ScoreLog] = []
@@ -193,14 +209,102 @@ def process_group_completion(group: str) -> list[ScoreLog]:
             stats["gf"] - stats["ga"],
             stats["gf"],
         )
-        created.extend(_award_team_points(team, POINTS_QUALIFY_GROUP, advance_reason))
+        created.extend(
+            _award_team_points(
+                team,
+                POINTS_QUALIFY_GROUP,
+                REASON_GROUP_ADVANCE,
+                {"group": group},
+                fallback_reason=advance_reason,
+            )
+        )
         if rank == 0:
-            created.extend(_award_team_points(team, POINTS_FIRST_IN_GROUP, top_reason))
+            created.extend(
+                _award_team_points(
+                    team,
+                    POINTS_FIRST_IN_GROUP,
+                    REASON_GROUP_FIRST,
+                    {"group": group},
+                    fallback_reason=top_reason,
+                )
+            )
 
     return created
 
 
-def award_phase_advancement(team: NationalTeam, phase: Match.Phase) -> list[ScoreLog]:
+def process_group_completion_from_standings(
+    group: str,
+    ranked_teams: list[NationalTeam],
+) -> list[ScoreLog]:
+    """
+    Otorga puntos de clasificación usando standings oficiales de API.
+
+    Args:
+        group: Letra del grupo (A-L).
+        ranked_teams: Equipos ordenados por clasificación (1º, 2º, ...).
+
+    Returns:
+        Lista de ScoreLog creados.
+    """
+    if len(ranked_teams) < 2:
+        logger.warning(
+            "Grupo %s: standings insuficientes desde API (%d equipos).",
+            group,
+            len(ranked_teams),
+        )
+        return []
+
+    _delete_group_classification_logs(group)
+
+    advance_reason = f"Clasificado desde grupo {group}"
+    top_reason = f"1\u00ba de grupo {group}"
+
+    first_team = ranked_teams[0]
+    second_team = ranked_teams[1]
+
+    created: list[ScoreLog] = []
+    created.extend(
+        _award_team_points(
+            first_team,
+            POINTS_QUALIFY_GROUP,
+            REASON_GROUP_ADVANCE,
+            {"group": group},
+            fallback_reason=advance_reason,
+        )
+    )
+    created.extend(
+        _award_team_points(
+            second_team,
+            POINTS_QUALIFY_GROUP,
+            REASON_GROUP_ADVANCE,
+            {"group": group},
+            fallback_reason=advance_reason,
+        )
+    )
+    created.extend(
+        _award_team_points(
+            first_team,
+            POINTS_FIRST_IN_GROUP,
+            REASON_GROUP_FIRST,
+            {"group": group},
+            fallback_reason=top_reason,
+        )
+    )
+
+    logger.info(
+        "Grupo %s: standings API aplicados (1º=%s, 2º=%s).",
+        group,
+        first_team.code,
+        second_team.code,
+    )
+    return created
+
+
+def award_phase_advancement(
+    team: NationalTeam,
+    phase: Match.Phase,
+    match: Match | None = None,
+) -> list[ScoreLog]:
     """
     Otorga puntos por avanzar a una fase eliminatoria.
 
@@ -221,68 +325,46 @@ def award_phase_advancement(team: NationalTeam, phase: Match.Phase) -> list[Scor
     if points == 0:
         return []
 
-    reason = f"Clasificado a {Match.Phase(phase).label}"
-    return _award_team_points(team, points, reason)
+    reason_context = {"phase": phase.value}
+    reason = render_scorelog_reason(REASON_ADVANCE_PHASE, reason_context)
+    return _award_team_points(
+        team,
+        points,
+        REASON_ADVANCE_PHASE,
+        reason_context,
+        match=match,
+        fallback_reason=reason,
+    )
 
 
-def award_champion(team: NationalTeam) -> list[ScoreLog]:
-    """Otorga los puntos por ganar el Mundial."""
-    return _award_team_points(team, POINTS_CHAMPION, "¡Campeón del Mundial!")
-
-
-def award_individual_prizes(
-    real_mvp: str,
-    real_top_scorer: str,
-    real_best_goalkeeper: str,
+def award_third_place(
+    team: NationalTeam,
+    match: Match | None = None,
 ) -> list[ScoreLog]:
-    """
-    Otorga puntos por acertar los premios individuales al final del torneo.
+    """Otorga los puntos por quedar 3º."""
+    return _award_team_points(
+        team,
+        POINTS_THIRD_PLACE,
+        REASON_THIRD_PLACE,
+        {},
+        match=match,
+        fallback_reason=render_scorelog_reason(REASON_THIRD_PLACE),
+    )
 
-    Args:
-        real_mvp: Nombre real del MVP del torneo.
-        real_top_scorer: Nombre real del Pichichi.
-        real_best_goalkeeper: Nombre real del Zamora.
 
-    Returns:
-        Lista de ScoreLog creados.
-    """
-    created: list[ScoreLog] = []
-
-    prize_config = [
-        ("predicted_mvp", real_mvp, POINTS_MVP, "Acertó el MVP del torneo"),
-        (
-            "predicted_top_scorer",
-            real_top_scorer,
-            POINTS_TOP_SCORER,
-            "Acertó el Pichichi",
-        ),
-        (
-            "predicted_best_goalkeeper",
-            real_best_goalkeeper,
-            POINTS_BEST_GOALKEEPER,
-            "Acertó el Zamora",
-        ),
-    ]
-
-    for field, real_value, points, reason in prize_config:
-        if not real_value:
-            continue
-        correct_participants = Participant.objects.filter(**{field: real_value})
-        for participant in correct_participants:
-            # Usamos el primer equipo del participante como referencia (premios no son de equipo)
-            team = participant.teams.first()
-            if team is None:
-                continue
-            log = ScoreLog.objects.create(
-                participant=participant,
-                team=team,
-                match=None,
-                points_earned=points,
-                reason=reason,
-            )
-            created.append(log)
-
-    return created
+def award_champion(
+    team: NationalTeam,
+    match: Match | None = None,
+) -> list[ScoreLog]:
+    """Otorga los puntos por ganar el Mundial."""
+    return _award_team_points(
+        team,
+        POINTS_CHAMPION,
+        REASON_CHAMPION,
+        {},
+        match=match,
+        fallback_reason=render_scorelog_reason(REASON_CHAMPION),
+    )
 
 
 # ── Funciones auxiliares (privadas) ───────────────────────────────────────────
@@ -297,6 +379,9 @@ def _calculate_match_points(match: Match, team: NationalTeam) -> int:
     my_score = match.home_score if is_home else match.away_score
     rival_score = match.away_score if is_home else match.home_score
 
+    if match.phase != Match.Phase.GROUP and not match.decided_in_90:
+        return POINTS_DRAW
+
     if my_score > rival_score:
         return POINTS_WIN
     if my_score == rival_score:
@@ -304,31 +389,111 @@ def _calculate_match_points(match: Match, team: NationalTeam) -> int:
     return 0
 
 
-def _build_match_reason(match: Match, team: NationalTeam, points: int) -> str:
-    """Construye el texto descriptivo del motivo de la puntuación."""
+def _build_match_reason_payload(
+    match: Match, team: NationalTeam, points: int
+) -> tuple[str, dict[str, str], str]:
+    """Construye código, contexto y texto descriptivo del motivo de la puntuación."""
     rival = match.away_team if match.home_team == team else match.home_team
+    reason_context = {"rival": rival.name if rival else ""}
     if points == POINTS_WIN:
-        return f"Victoria vs {rival.name}"
+        return (
+            REASON_MATCH_WIN,
+            reason_context,
+            render_scorelog_reason(
+                REASON_MATCH_WIN,
+                reason_context,
+                f"Victoria vs {reason_context['rival']}",
+            ),
+        )
     if points == POINTS_DRAW:
-        return f"Empate vs {rival.name}"
-    return f"Derrota vs {rival.name}"
+        return (
+            REASON_MATCH_DRAW,
+            reason_context,
+            render_scorelog_reason(
+                REASON_MATCH_DRAW,
+                reason_context,
+                f"Empate vs {reason_context['rival']}",
+            ),
+        )
+    return (
+        REASON_MATCH_LOSS,
+        reason_context,
+        render_scorelog_reason(
+            REASON_MATCH_LOSS,
+            reason_context,
+            f"Derrota vs {reason_context['rival']}",
+        ),
+    )
 
 
 def _award_team_points(
     team: NationalTeam,
     points: int,
-    reason: str,
+    reason_code: str,
+    reason_context: dict[str, str] | None = None,
+    match: Match | None = None,
+    fallback_reason: str = "",
 ) -> list[ScoreLog]:
     """Crea ScoreLogs para todos los participantes que tienen un equipo dado."""
     created: list[ScoreLog] = []
+    reason_context = reason_context or {}
+    reason = render_scorelog_reason(reason_code, reason_context, fallback_reason)
+    ScoreLog.objects.filter(team=team, match=match, reason_code=reason_code).delete()
     participants = Participant.objects.filter(teams=team)
     for participant in participants:
         log = ScoreLog.objects.create(
             participant=participant,
             team=team,
-            match=None,
+            match=match,
             points_earned=points,
+            reason_code=reason_code,
+            reason_context=reason_context,
             reason=reason,
         )
         created.append(log)
     return created
+
+
+def _award_post_match_bonuses(match: Match) -> list[ScoreLog]:
+    """Otorga los puntos de avance o campeón asociados al partido cerrado."""
+    if match.phase == Match.Phase.GROUP:
+        return []
+
+    winner = match.knockout_winner
+    if winner is None:
+        return []
+
+    if match.phase == Match.Phase.FINAL:
+        return award_champion(winner, match=match)
+
+    if match.phase == Match.Phase.THIRD_PLACE:
+        return award_third_place(winner, match=match)
+
+    next_phase_map = {
+        Match.Phase.ROUND_OF_32: Match.Phase.ROUND_OF_16,
+        Match.Phase.ROUND_OF_16: Match.Phase.QUARTER_FINAL,
+        Match.Phase.QUARTER_FINAL: Match.Phase.SEMI_FINAL,
+        Match.Phase.SEMI_FINAL: Match.Phase.FINAL,
+    }
+    next_phase = next_phase_map.get(match.phase)
+    if next_phase is None:
+        return []
+
+    return award_phase_advancement(winner, next_phase, match=match)
+
+
+def _delete_group_classification_logs(group: str) -> None:
+    """Elimina logs de clasificación de un grupo concreto para recalcular idempotente."""
+    del1, _ = ScoreLog.objects.filter(
+        reason_code=REASON_GROUP_ADVANCE,
+        reason_context__group=group,
+    ).delete()
+    del2, _ = ScoreLog.objects.filter(
+        reason_code=REASON_GROUP_FIRST,
+        reason_context__group=group,
+    ).delete()
+    deleted = del1 + del2
+    if deleted:
+        logger.info(
+            "Grupo %s: %d logs de clasificación previos eliminados.", group, deleted
+        )

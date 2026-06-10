@@ -18,15 +18,13 @@ from apps.pool.services.scoring import (
     POINTS_DRAW,
     POINTS_FINAL,
     POINTS_FIRST_IN_GROUP,
-    POINTS_MVP,
     POINTS_QUALIFY_GROUP,
     POINTS_QUARTER_FINAL,
     POINTS_ROUND_OF_16,
     POINTS_SEMI_FINAL,
-    POINTS_TOP_SCORER,
+    POINTS_THIRD_PLACE,
     POINTS_WIN,
     award_champion,
-    award_individual_prizes,
     award_phase_advancement,
     process_group_completion,
     process_match_result,
@@ -117,6 +115,137 @@ class TestMatchScoring:
         # Solo debe haber un log por equipo involucrado con participantes
         assert total_logs == 1
 
+    @pytest.mark.parametrize(
+        ("phase", "expected_bonus"),
+        [
+            (Match.Phase.ROUND_OF_32, POINTS_ROUND_OF_16),
+            (Match.Phase.ROUND_OF_16, POINTS_QUARTER_FINAL),
+            (Match.Phase.QUARTER_FINAL, POINTS_SEMI_FINAL),
+            (Match.Phase.SEMI_FINAL, POINTS_FINAL),
+            (Match.Phase.THIRD_PLACE, POINTS_THIRD_PLACE),
+            (Match.Phase.FINAL, POINTS_CHAMPION),
+        ],
+    )
+    def test_eliminatorias_adjudican_bonus_al_guardar_resultado(
+        self, participant_alice, team_argentina, team_brasil, phase, expected_bonus
+    ):
+        """Guardar un resultado de eliminatoria debe sumar el bonus de fase correcto."""
+        from django.utils import timezone
+
+        match = Match.objects.create(
+            home_team=team_argentina,
+            away_team=team_brasil,
+            phase=phase,
+            match_label=phase.label,
+            scheduled_at=timezone.now(),
+            home_score=2,
+            away_score=1,
+            is_finished=True,
+        )
+
+        logs = process_match_result(match)
+        alice_logs = [log for log in logs if log.participant == participant_alice]
+
+        assert len(alice_logs) == 2
+        assert (
+            sum(log.points_earned for log in alice_logs) == POINTS_WIN + expected_bonus
+        )
+        assert any(log.points_earned == expected_bonus for log in alice_logs)
+
+    def test_final_otorga_bonus_de_campeon_al_ganador(
+        self, participant_alice, team_argentina, team_brasil
+    ):
+        """El ganador de la final debe sumar también el bonus de campeón."""
+        from django.utils import timezone
+
+        match = Match.objects.create(
+            home_team=team_argentina,
+            away_team=team_brasil,
+            phase=Match.Phase.FINAL,
+            match_label="Final",
+            scheduled_at=timezone.now(),
+            home_score=2,
+            away_score=1,
+            is_finished=True,
+        )
+
+        logs = process_match_result(match)
+        alice_logs = [log for log in logs if log.participant == participant_alice]
+
+        assert len(alice_logs) == 2
+        assert sorted(log.points_earned for log in alice_logs) == [
+            POINTS_WIN,
+            POINTS_CHAMPION,
+        ]
+        assert sum(log.points_earned for log in alice_logs) == 33
+
+    def test_eliminatoria_fuera_de_90_da_empate_y_bonus(
+        self, participant_alice, team_argentina, team_brasil
+    ):
+        """Si KO no se resolvió en 90', suma +1 empate y el bonus de avance."""
+        from django.utils import timezone
+
+        match = Match.objects.create(
+            home_team=team_argentina,
+            away_team=team_brasil,
+            phase=Match.Phase.ROUND_OF_16,
+            match_label="R16",
+            scheduled_at=timezone.now(),
+            home_score=2,
+            away_score=1,
+            decided_in_90=False,
+            is_finished=True,
+        )
+
+        logs = process_match_result(match)
+        alice_logs = [log for log in logs if log.participant == participant_alice]
+
+        assert len(alice_logs) == 2
+        assert (
+            sum(log.points_earned for log in alice_logs)
+            == POINTS_DRAW + POINTS_QUARTER_FINAL
+        )
+        assert any(log.points_earned == POINTS_DRAW for log in alice_logs)
+        assert any(log.points_earned == POINTS_QUARTER_FINAL for log in alice_logs)
+
+    @pytest.mark.parametrize(
+        ("phase", "expected_bonus"),
+        [
+            (Match.Phase.ROUND_OF_32, POINTS_ROUND_OF_16),
+            (Match.Phase.ROUND_OF_16, POINTS_QUARTER_FINAL),
+            (Match.Phase.QUARTER_FINAL, POINTS_SEMI_FINAL),
+            (Match.Phase.SEMI_FINAL, POINTS_FINAL),
+            (Match.Phase.THIRD_PLACE, POINTS_THIRD_PLACE),
+            (Match.Phase.FINAL, POINTS_CHAMPION),
+        ],
+    )
+    def test_empate_en_eliminatoria_con_penaltis_da_bonus(
+        self, participant_alice, team_argentina, team_brasil, phase, expected_bonus
+    ):
+        """En KO: empate da +1 y si hay ganador por penaltis se aplica el bonus."""
+        from django.utils import timezone
+
+        match = Match.objects.create(
+            home_team=team_argentina,
+            away_team=team_brasil,
+            phase=phase,
+            match_label=phase.label,
+            scheduled_at=timezone.now(),
+            home_score=1,
+            away_score=1,
+            penalties_winner=Match.PenaltiesWinner.HOME,
+            is_finished=True,
+        )
+
+        logs = process_match_result(match)
+        alice_logs = [log for log in logs if log.participant == participant_alice]
+
+        assert len(alice_logs) == 2
+        assert (
+            sum(log.points_earned for log in alice_logs) == POINTS_DRAW + expected_bonus
+        )
+        assert any(log.points_earned == expected_bonus for log in alice_logs)
+
 
 @pytest.mark.django_db
 class TestPhaseAdvancement:
@@ -147,52 +276,6 @@ class TestPhaseAdvancement:
         logs = award_champion(team_argentina)
         assert len(logs) == 1
         assert logs[0].points_earned == POINTS_CHAMPION
-
-
-@pytest.mark.django_db
-class TestIndividualPrizes:
-    """Tests de los premios individuales (MVP, Pichichi, Zamora)."""
-
-    def test_acertar_mvp_otorga_veinte_puntos(self, participant_alice):
-        """Acertar el MVP debe dar +20 puntos."""
-        participant_alice.predicted_mvp = "Lionel Messi"
-        participant_alice.save()
-
-        logs = award_individual_prizes(
-            real_mvp="Lionel Messi",
-            real_top_scorer="",
-            real_best_goalkeeper="",
-        )
-
-        assert len(logs) == 1
-        assert logs[0].points_earned == POINTS_MVP
-
-    def test_no_acertar_mvp_no_otorga_puntos(self, participant_alice):
-        """No acertar el MVP no debe generar ningún log."""
-        participant_alice.predicted_mvp = "Cristiano Ronaldo"
-        participant_alice.save()
-
-        logs = award_individual_prizes(
-            real_mvp="Lionel Messi",
-            real_top_scorer="",
-            real_best_goalkeeper="",
-        )
-
-        assert logs == []
-
-    def test_acertar_pichichi_otorga_diez_puntos(self, participant_alice):
-        """Acertar el Pichichi debe dar +10 puntos."""
-        participant_alice.predicted_top_scorer = "Erling Haaland"
-        participant_alice.save()
-
-        logs = award_individual_prizes(
-            real_mvp="",
-            real_top_scorer="Erling Haaland",
-            real_best_goalkeeper="",
-        )
-
-        assert len(logs) == 1
-        assert logs[0].points_earned == POINTS_TOP_SCORER
 
 
 @pytest.mark.django_db
@@ -325,7 +408,7 @@ class TestGroupCompletion:
         process_group_completion("Z")
 
         advance_logs = ScoreLog.objects.filter(
-            reason="Clasificado desde grupo Z",
+            reason_code="group_advance",
         ).count()
         # 2 participantes con equipos que clasifican (alice y bob)
         assert advance_logs == 2

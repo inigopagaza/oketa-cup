@@ -157,6 +157,23 @@ SPECTACULAR_SETTINGS = {
     "VERSION": "0.1.0",
 }
 
+# ── Integraciones externas ────────────────────────────────────────────────────
+
+FOOTBALL_DATA_API_KEY = config("FOOTBALL_DATA_API_KEY", default="")
+FOOTBALL_DATA_BASE_URL = config(
+    "FOOTBALL_DATA_BASE_URL", default="https://api.football-data.org/v4"
+)
+FOOTBALL_DATA_COMPETITION_CODE = config("FOOTBALL_DATA_COMPETITION_CODE", default="WC")
+FOOTBALL_DATA_TIMEOUT_SECONDS = config(
+    "FOOTBALL_DATA_TIMEOUT_SECONDS", cast=int, default=20
+)
+FOOTBALL_DATA_USE_API_STANDINGS = config(
+    "FOOTBALL_DATA_USE_API_STANDINGS", cast=bool, default=True
+)
+FOOTBALL_DATA_AUTO_CREATE_KNOCKOUT = config(
+    "FOOTBALL_DATA_AUTO_CREATE_KNOCKOUT", cast=bool, default=True
+)
+
 # ── Primary key por defecto ────────────────────────────────────────────────────
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

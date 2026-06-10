@@ -10,6 +10,12 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.http import require_POST
 
+from apps.pool.models import (
+    REASON_BEST_GOALKEEPER,
+    REASON_MVP,
+    REASON_TOP_SCORER,
+    render_scorelog_reason,
+)
 from apps.pool.services.scoring import (
     POINTS_BEST_GOALKEEPER,
     POINTS_MVP,
@@ -22,7 +28,7 @@ from .models import Match, NationalTeam, TournamentConfig
 
 def results(request: HttpRequest) -> HttpResponse:
     """Página con todos los resultados del mundial agrupados por fase."""
-    phases: list[tuple[Match.Phase, str]] = [
+    phases = [
         (Match.Phase.GROUP, _("Fase de grupos")),
         (Match.Phase.ROUND_OF_32, _("Dieciseisavos de final")),
         (Match.Phase.ROUND_OF_16, _("Octavos de final")),
@@ -58,12 +64,30 @@ def admin_set_result(request: HttpRequest, match_id: int) -> HttpResponse:
     match = get_object_or_404(Match, id=match_id)
     home_score = request.POST.get("home_score", "").strip()
     away_score = request.POST.get("away_score", "").strip()
+    penalties_winner = request.POST.get("penalties_winner", "").strip()
+    decided_in_90 = request.POST.get("decided_in_90", "1") == "1"
     is_finished = request.POST.get("is_finished") == "1"
 
     if home_score.isdigit() and away_score.isdigit():
         match.home_score = int(home_score)
         match.away_score = int(away_score)
         match.is_finished = is_finished
+        match.decided_in_90 = (
+            decided_in_90 if match.phase != Match.Phase.GROUP else True
+        )
+        is_knockout = match.phase != Match.Phase.GROUP
+        is_draw = match.home_score == match.away_score
+        if (
+            is_finished
+            and is_knockout
+            and is_draw
+            and not match.decided_in_90
+            and penalties_winner
+            in (Match.PenaltiesWinner.HOME, Match.PenaltiesWinner.AWAY)
+        ):
+            match.penalties_winner = penalties_winner
+        else:
+            match.penalties_winner = ""
         match.save()
         if is_finished:
             process_match_result(match)
@@ -89,12 +113,6 @@ def admin_recalculate(request: HttpRequest) -> HttpResponse:
         process_match_result(match)
 
     return redirect("tournament:gestion")
-
-
-# Razones fijas de ScoreLogs de premios individuales (para identificarlos en idempotencia)
-_REASON_MVP = "Acertó el MVP del torneo"
-_REASON_TOP_SCORER = "Acertó el Pichichi"
-_REASON_GOALKEEPER = "Acertó el Zamora"
 
 
 @login_required
@@ -123,26 +141,29 @@ def admin_award_prizes(request: HttpRequest) -> HttpResponse:
     config.save()
 
     prize_config = [
-        ("mvp", _REASON_MVP, POINTS_MVP),
-        ("top_scorer", _REASON_TOP_SCORER, POINTS_TOP_SCORER),
-        ("best_goalkeeper", _REASON_GOALKEEPER, POINTS_BEST_GOALKEEPER),
+        ("mvp", REASON_MVP, POINTS_MVP),
+        ("top_scorer", REASON_TOP_SCORER, POINTS_TOP_SCORER),
+        ("best_goalkeeper", REASON_BEST_GOALKEEPER, POINTS_BEST_GOALKEEPER),
     ]
 
-    for key, reason, points in prize_config:
+    for key, reason_code, points in prize_config:
         # Idempotencia: eliminar logs previos de este premio
-        ScoreLog.objects.filter(match=None, reason=reason).delete()  # pyright: ignore[reportAttributeAccessIssue]
+        ScoreLog.objects.filter(match=None, reason_code=reason_code).delete()  # pyright: ignore[reportAttributeAccessIssue]
 
         checked_ids = request.POST.getlist(f"winner_{key}")
         for participant in Participant.objects.filter(id__in=checked_ids):  # pyright: ignore[reportAttributeAccessIssue]
             team = participant.teams.first()
             if team is None:
                 continue
+            reason_context = {}
             ScoreLog.objects.create(  # pyright: ignore[reportAttributeAccessIssue]
                 participant=participant,
                 team=team,
                 match=None,
                 points_earned=points,
-                reason=reason,
+                reason_code=reason_code,
+                reason_context=reason_context,
+                reason=render_scorelog_reason(reason_code, reason_context),
             )
 
     return redirect("tournament:gestion")
@@ -186,13 +207,13 @@ def gestion(request: HttpRequest) -> HttpResponse:
             {
                 "participant": p,
                 "mvp_correct": ScoreLog.objects.filter(  # pyright: ignore[reportAttributeAccessIssue]
-                    participant=p, match=None, reason=_REASON_MVP
+                    participant=p, match=None, reason_code=REASON_MVP
                 ).exists(),
                 "top_scorer_correct": ScoreLog.objects.filter(  # pyright: ignore[reportAttributeAccessIssue]
-                    participant=p, match=None, reason=_REASON_TOP_SCORER
+                    participant=p, match=None, reason_code=REASON_TOP_SCORER
                 ).exists(),
                 "goalkeeper_correct": ScoreLog.objects.filter(  # pyright: ignore[reportAttributeAccessIssue]
-                    participant=p, match=None, reason=_REASON_GOALKEEPER
+                    participant=p, match=None, reason_code=REASON_BEST_GOALKEEPER
                 ).exists(),
             }
         )

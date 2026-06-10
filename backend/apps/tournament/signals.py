@@ -28,23 +28,15 @@ def propagate_match_winner(sender, instance: Match, **kwargs) -> None:
         return
     if instance.home_score is None or instance.away_score is None:
         return
-    if instance.home_score == instance.away_score:
-        # Empate en tiempo reglamentario — el admin deberá asignar manualmente
-        # si el sistema no registra el resultado de penaltis/prórroga.
+    winner = instance.knockout_winner
+    if winner is None:
         logger.warning(
-            "Partido %s terminó en empate (%s-%s); ganador no propagado automáticamente.",
+            "Partido %s sin ganador resoluble (%s-%s, penaltis=%s); no propagado.",
             instance.pk,
             instance.home_score,
             instance.away_score,
+            instance.penalties_winner,
         )
-        return
-
-    winner = (
-        instance.home_team
-        if instance.home_score > instance.away_score
-        else instance.away_team
-    )
-    if winner is None:
         return
 
     next_match = instance.next_match

@@ -1,7 +1,7 @@
 """Vistas de la app pool (stub inicial)."""
 
 from django.contrib.auth.decorators import login_required
-from django.db.models import Sum
+from django.db.models import Prefetch, Sum
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_POST
@@ -28,7 +28,15 @@ def dashboard(request: HttpRequest) -> HttpResponse:
     # Clasificación general: participantes normales ordenados por puntos
     ranking = sorted(
         Participant.objects.select_related("user")
-        .prefetch_related("teams")
+        .prefetch_related(
+            "teams",
+            Prefetch(
+                "score_logs",
+                queryset=ScoreLog.objects.select_related("team", "match").order_by(
+                    "-created_at"
+                ),
+            ),
+        )
         .filter(user__is_staff=False)
         .distinct(),
         key=lambda p: p.total_points,
@@ -62,6 +70,7 @@ def dashboard(request: HttpRequest) -> HttpResponse:
             {
                 "participant": ranked_participant,
                 "selections": selections,
+                "score_logs": list(ranked_participant.score_logs.all()),
             }
         )
 
@@ -87,6 +96,12 @@ def dashboard(request: HttpRequest) -> HttpResponse:
         for team in participant.teams.all()
     ]
 
+    recent_score_logs = list(
+        participant.score_logs.select_related("team", "match").order_by("-created_at")[
+            :5
+        ]
+    )
+
     return render(
         request,
         "pool/dashboard.html",
@@ -96,6 +111,7 @@ def dashboard(request: HttpRequest) -> HttpResponse:
             "ranking_rows": ranking_rows,
             "todays_matches": todays_matches,
             "team_scores": team_scores,
+            "recent_score_logs": recent_score_logs,
         },
     )
 
