@@ -16,13 +16,18 @@ from django.db.models import QuerySet
 from django.utils import timezone
 
 from apps.pool.services.scoring import (
+    process_group_advancement_from_round_of_32,
     process_group_completion,
-    process_group_completion_from_standings,
+    process_group_first_from_standings,
     process_match_result,
 )
 from apps.tournament.models import Match, NationalTeam
 
 logger = logging.getLogger(__name__)
+
+GROUP_MATCHES_PER_GROUP = 6
+ROUND_OF_32_MATCHES = 16
+ROUND_OF_32_TEAMS = 32
 
 
 @dataclass
@@ -487,10 +492,28 @@ class FootballDataSyncService:
         season: int | None = None,
         groups: list[str] | None = None,
     ) -> int:
-        payload = self._fetch_standings_payload(season=season)
-        standings = payload.get("standings", [])
-        recalculated = 0
+        standings = self._fetch_standings_payload(season=season).get("standings", [])
+        api_matches = self._fetch_matches_payload(season=season, status=None).get(
+            "matches", []
+        )
         target_groups = {group.upper() for group in groups or []}
+
+        top_groups_recalculated = self._apply_group_first_points_from_standings(
+            standings,
+            api_matches,
+            target_groups,
+        )
+        self._apply_group_advance_points_from_round_of_32(api_matches)
+
+        return top_groups_recalculated
+
+    def _apply_group_first_points_from_standings(
+        self,
+        standings: list[dict],
+        api_matches: list[dict],
+        target_groups: set[str],
+    ) -> int:
+        recalculated = 0
 
         for standing in standings:
             standing_type = str(standing.get("type") or "").upper()
@@ -504,24 +527,64 @@ class FootballDataSyncService:
                 continue
 
             table = standing.get("table") or []
-            ranked_teams: list[NationalTeam] = []
-            for row in table:
-                team_data = row.get("team") or {}
-                team = self._resolve_local_team_from_api_team(team_data)
-                if team is not None:
-                    ranked_teams.append(team)
-
-            if len(ranked_teams) < 2:
-                logger.warning(
-                    "Grupo %s: standings API sin equipos suficientes mapeados.",
+            if not self._is_group_finished_in_standings(table):
+                logger.info(
+                    "Grupo %s: standings API aún incompletos (playedGames < 3).",
+                    group_letter,
+                )
+                continue
+            if not self._is_group_fully_finished_in_api_matches(
+                group_letter,
+                api_matches,
+            ):
+                logger.info(
+                    "Grupo %s: sigue en juego o incompleto según partidos API.",
                     group_letter,
                 )
                 continue
 
-            process_group_completion_from_standings(group_letter, ranked_teams)
+            ranked_teams = self._extract_ranked_teams_from_standing(group_letter, table)
+            if not ranked_teams:
+                continue
+
+            process_group_first_from_standings(group_letter, ranked_teams)
             recalculated += 1
 
         return recalculated
+
+    def _apply_group_advance_points_from_round_of_32(
+        self,
+        api_matches: list[dict],
+    ) -> None:
+        qualified_teams = self._extract_qualified_teams_from_round_of_32(api_matches)
+        if qualified_teams:
+            process_group_advancement_from_round_of_32(qualified_teams)
+            return
+
+        logger.info(
+            "No se aplica GROUP_ADVANCE: dieciseisavos API no están completamente configurados."
+        )
+
+    def _extract_ranked_teams_from_standing(
+        self,
+        group_letter: str,
+        table: list[dict],
+    ) -> list[NationalTeam]:
+        ranked_teams: list[NationalTeam] = []
+        for row in table:
+            team_data = row.get("team") or {}
+            team = self._resolve_local_team_from_api_team(team_data)
+            if team is not None:
+                ranked_teams.append(team)
+
+        if len(ranked_teams) < 2:
+            logger.warning(
+                "Grupo %s: standings API sin equipos suficientes mapeados.",
+                group_letter,
+            )
+            return []
+
+        return ranked_teams
 
     def _get_finished_local_groups(self) -> list[str]:
         groups = (
@@ -531,6 +594,68 @@ class FootballDataSyncService:
             .distinct()
         )
         return sorted({group for group in groups if group})
+
+    def _is_group_finished_in_standings(self, table: list[dict]) -> bool:
+        if not table:
+            return False
+
+        played_games_values = [
+            self._as_int_or_none(row.get("playedGames")) for row in table
+        ]
+        return all(
+            played_games is not None and played_games >= 3
+            for played_games in played_games_values
+        )
+
+    def _is_group_fully_finished_in_api_matches(
+        self,
+        group_letter: str,
+        raw_matches: list[dict],
+    ) -> bool:
+        group_matches = [
+            raw_match
+            for raw_match in raw_matches
+            if (raw_match.get("stage") or "").upper() == "GROUP_STAGE"
+            and self._extract_group_letter(raw_match.get("group")) == group_letter
+        ]
+
+        if len(group_matches) != GROUP_MATCHES_PER_GROUP:
+            return False
+
+        return all(
+            (raw_match.get("status") or "").upper() == "FINISHED"
+            for raw_match in group_matches
+        )
+
+    def _extract_qualified_teams_from_round_of_32(
+        self,
+        raw_matches: list[dict],
+    ) -> list[NationalTeam]:
+        round_of_32_matches = [
+            raw_match
+            for raw_match in raw_matches
+            if (raw_match.get("stage") or "").upper() == "LAST_32"
+        ]
+        if len(round_of_32_matches) != ROUND_OF_32_MATCHES:
+            return []
+
+        qualified: dict[int, NationalTeam] = {}
+        for raw_match in round_of_32_matches:
+            home_team = self._resolve_local_team(
+                raw_match.get("homeTeam", {}).get("tla")
+            )
+            away_team = self._resolve_local_team(
+                raw_match.get("awayTeam", {}).get("tla")
+            )
+            if home_team is None or away_team is None:
+                return []
+            qualified[home_team.id] = home_team
+            qualified[away_team.id] = away_team
+
+        if len(qualified) != ROUND_OF_32_TEAMS:
+            return []
+
+        return list(qualified.values())
 
     def _parse_api_datetime(self, raw_value: str | None) -> datetime | None:
         if not raw_value:

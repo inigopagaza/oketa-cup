@@ -232,70 +232,72 @@ def process_group_completion(group: str) -> list[ScoreLog]:
     return created
 
 
-def process_group_completion_from_standings(
+def process_group_first_from_standings(
     group: str,
     ranked_teams: list[NationalTeam],
 ) -> list[ScoreLog]:
-    """
-    Otorga puntos de clasificación usando standings oficiales de API.
-
-    Args:
-        group: Letra del grupo (A-L).
-        ranked_teams: Equipos ordenados por clasificación (1º, 2º, ...).
-
-    Returns:
-        Lista de ScoreLog creados.
-    """
-    if len(ranked_teams) < 2:
-        logger.warning(
-            "Grupo %s: standings insuficientes desde API (%d equipos).",
-            group,
-            len(ranked_teams),
-        )
+    """Otorga solo el +2 al primero de grupo usando standings API."""
+    if not ranked_teams:
+        logger.warning("Grupo %s: standings sin equipos para TOP_GROUP.", group)
         return []
 
-    _delete_group_classification_logs(group)
-
-    advance_reason = f"Clasificado desde grupo {group}"
-    top_reason = f"1\u00ba de grupo {group}"
+    _delete_group_first_logs(group)
 
     first_team = ranked_teams[0]
-    second_team = ranked_teams[1]
-
-    created: list[ScoreLog] = []
-    created.extend(
-        _award_team_points(
-            first_team,
-            POINTS_QUALIFY_GROUP,
-            REASON_GROUP_ADVANCE,
-            {"group": group},
-            fallback_reason=advance_reason,
-        )
+    top_reason = f"1\u00ba de grupo {group}"
+    created = _award_team_points(
+        first_team,
+        POINTS_FIRST_IN_GROUP,
+        REASON_GROUP_FIRST,
+        {"group": group},
+        fallback_reason=top_reason,
     )
-    created.extend(
-        _award_team_points(
-            second_team,
-            POINTS_QUALIFY_GROUP,
-            REASON_GROUP_ADVANCE,
-            {"group": group},
-            fallback_reason=advance_reason,
-        )
-    )
-    created.extend(
-        _award_team_points(
-            first_team,
-            POINTS_FIRST_IN_GROUP,
-            REASON_GROUP_FIRST,
-            {"group": group},
-            fallback_reason=top_reason,
-        )
-    )
-
     logger.info(
-        "Grupo %s: standings API aplicados (1º=%s, 2º=%s).",
+        "Grupo %s: TOP_GROUP aplicado desde standings API (%s).",
         group,
         first_team.code,
-        second_team.code,
+    )
+    return created
+
+
+def process_group_advancement_from_round_of_32(
+    qualified_teams: list[NationalTeam],
+) -> list[ScoreLog]:
+    """
+    Otorga el +6 de clasificación usando los cruces configurados de dieciseisavos.
+
+    Es idempotente: borra todos los logs previos de REASON_GROUP_ADVANCE y los
+    reconstruye a partir de los equipos que aparecen en los emparejamientos.
+    """
+    if not qualified_teams:
+        return []
+
+    _delete_all_group_advance_logs()
+
+    created: list[ScoreLog] = []
+    seen_team_ids: set[int] = set()
+    for team in qualified_teams:
+        if team.id in seen_team_ids:
+            continue
+        seen_team_ids.add(team.id)
+        group = (team.group or "").upper()
+        if not group:
+            logger.warning("Equipo %s sin grupo al otorgar GROUP_ADVANCE.", team.code)
+            continue
+
+        created.extend(
+            _award_team_points(
+                team,
+                POINTS_QUALIFY_GROUP,
+                REASON_GROUP_ADVANCE,
+                {"group": group},
+                fallback_reason=f"Clasificado desde grupo {group}",
+            )
+        )
+
+    logger.info(
+        "GROUP_ADVANCE aplicado desde cruces de dieciseisavos para %d equipos.",
+        len(seen_team_ids),
     )
     return created
 
@@ -497,3 +499,21 @@ def _delete_group_classification_logs(group: str) -> None:
         logger.info(
             "Grupo %s: %d logs de clasificación previos eliminados.", group, deleted
         )
+
+
+def _delete_group_first_logs(group: str) -> None:
+    deleted, _ = ScoreLog.objects.filter(
+        reason_code=REASON_GROUP_FIRST,
+        reason_context__group=group,
+    ).delete()
+    if deleted:
+        logger.info("Grupo %s: %d logs TOP_GROUP previos eliminados.", group, deleted)
+
+
+def _delete_all_group_advance_logs() -> None:
+    deleted, _ = ScoreLog.objects.filter(
+        reason_code=REASON_GROUP_ADVANCE,
+        match=None,
+    ).delete()
+    if deleted:
+        logger.info("Eliminados %d logs previos de GROUP_ADVANCE.", deleted)

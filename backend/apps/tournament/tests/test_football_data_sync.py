@@ -10,6 +10,89 @@ from apps.tournament.services.football_data_sync import FootballDataSyncService
 
 @pytest.mark.django_db
 class TestFootballDataSyncService:
+    @staticmethod
+    def _group_stage_payload_matches(*, main_status: str = "FINISHED") -> list[dict]:
+        return [
+            {
+                "utcDate": "2026-06-11T16:00:00Z",
+                "stage": "GROUP_STAGE",
+                "status": main_status,
+                "group": "GROUP_A",
+                "homeTeam": {"tla": "ARG"},
+                "awayTeam": {"tla": "BRA"},
+                "score": {
+                    "winner": "HOME_TEAM",
+                    "duration": "REGULAR",
+                    "fullTime": {"home": 2, "away": 0},
+                },
+            },
+            {
+                "utcDate": "2026-06-12T10:00:00Z",
+                "stage": "GROUP_STAGE",
+                "status": "FINISHED",
+                "group": "GROUP_A",
+                "homeTeam": {"tla": "AAA"},
+                "awayTeam": {"tla": "BBB"},
+                "score": {
+                    "winner": "HOME_TEAM",
+                    "duration": "REGULAR",
+                    "fullTime": {"home": 1, "away": 0},
+                },
+            },
+            {
+                "utcDate": "2026-06-12T13:00:00Z",
+                "stage": "GROUP_STAGE",
+                "status": "FINISHED",
+                "group": "GROUP_A",
+                "homeTeam": {"tla": "CCC"},
+                "awayTeam": {"tla": "DDD"},
+                "score": {
+                    "winner": "HOME_TEAM",
+                    "duration": "REGULAR",
+                    "fullTime": {"home": 2, "away": 1},
+                },
+            },
+            {
+                "utcDate": "2026-06-13T10:00:00Z",
+                "stage": "GROUP_STAGE",
+                "status": "FINISHED",
+                "group": "GROUP_A",
+                "homeTeam": {"tla": "AAA"},
+                "awayTeam": {"tla": "CCC"},
+                "score": {
+                    "winner": "DRAW",
+                    "duration": "REGULAR",
+                    "fullTime": {"home": 1, "away": 1},
+                },
+            },
+            {
+                "utcDate": "2026-06-13T13:00:00Z",
+                "stage": "GROUP_STAGE",
+                "status": "FINISHED",
+                "group": "GROUP_A",
+                "homeTeam": {"tla": "BBB"},
+                "awayTeam": {"tla": "DDD"},
+                "score": {
+                    "winner": "AWAY_TEAM",
+                    "duration": "REGULAR",
+                    "fullTime": {"home": 0, "away": 2},
+                },
+            },
+            {
+                "utcDate": "2026-06-14T13:00:00Z",
+                "stage": "GROUP_STAGE",
+                "status": "FINISHED",
+                "group": "GROUP_A",
+                "homeTeam": {"tla": "AAA"},
+                "awayTeam": {"tla": "DDD"},
+                "score": {
+                    "winner": "AWAY_TEAM",
+                    "duration": "REGULAR",
+                    "fullTime": {"home": 0, "away": 1},
+                },
+            },
+        ]
+
     def test_knockout_penaltis_mapea_campos_y_recalcula_puntos(
         self, monkeypatch, team_argentina, team_brasil
     ):
@@ -86,15 +169,15 @@ class TestFootballDataSyncService:
             lambda arg_match: [],
         )
 
-        def fake_process_group_completion_from_standings(group: str, ranked_teams):
+        def fake_process_group_first_from_standings(group: str, ranked_teams):
             called_groups.append(group)
             assert ranked_teams[0] == team_argentina
             assert ranked_teams[1] == team_brasil
             return []
 
         monkeypatch.setattr(
-            "apps.tournament.services.football_data_sync.process_group_completion_from_standings",
-            fake_process_group_completion_from_standings,
+            "apps.tournament.services.football_data_sync.process_group_first_from_standings",
+            fake_process_group_first_from_standings,
         )
         monkeypatch.setattr(
             "apps.tournament.services.football_data_sync.process_group_completion",
@@ -106,21 +189,7 @@ class TestFootballDataSyncService:
             service,
             "_fetch_matches_payload",
             lambda season=None, status=None: {
-                "matches": [
-                    {
-                        "utcDate": "2026-06-11T16:00:00Z",
-                        "stage": "GROUP_STAGE",
-                        "status": "FINISHED",
-                        "group": "GROUP_A",
-                        "homeTeam": {"tla": "ARG"},
-                        "awayTeam": {"tla": "BRA"},
-                        "score": {
-                            "winner": "HOME_TEAM",
-                            "duration": "REGULAR",
-                            "fullTime": {"home": 2, "away": 0},
-                        },
-                    }
-                ]
+                "matches": self._group_stage_payload_matches(main_status="FINISHED")
             },
         )
         monkeypatch.setattr(
@@ -132,8 +201,14 @@ class TestFootballDataSyncService:
                         "type": "TOTAL",
                         "group": "GROUP_A",
                         "table": [
-                            {"team": {"tla": "ARG", "name": "Argentina"}},
-                            {"team": {"tla": "BRA", "name": "Brasil"}},
+                            {
+                                "team": {"tla": "ARG", "name": "Argentina"},
+                                "playedGames": 3,
+                            },
+                            {
+                                "team": {"tla": "BRA", "name": "Brasil"},
+                                "playedGames": 3,
+                            },
                         ],
                     }
                 ]
@@ -178,6 +253,129 @@ class TestFootballDataSyncService:
         assert summary.group_recalculations == 0
         assert summary.group_recalculations_source == "none"
         assert summary.scored_matches == 0
+
+    def test_no_aplica_standings_api_si_el_grupo_no_tiene_3_partidos_por_equipo(
+        self, monkeypatch, team_argentina, team_brasil
+    ):
+        match = Match.objects.create(
+            home_team=team_argentina,
+            away_team=team_brasil,
+            phase=Match.Phase.GROUP,
+            group="A",
+            scheduled_at=datetime(2026, 6, 11, 16, 0, tzinfo=UTC),
+            is_finished=False,
+        )
+
+        called_groups: list[str] = []
+
+        monkeypatch.setattr(
+            "apps.tournament.services.football_data_sync.process_match_result",
+            lambda arg_match: [],
+        )
+        monkeypatch.setattr(
+            "apps.tournament.services.football_data_sync.process_group_first_from_standings",
+            lambda group, ranked_teams: called_groups.append(group),
+        )
+
+        service = FootballDataSyncService(api_key="token-test")
+        monkeypatch.setattr(
+            service,
+            "_fetch_matches_payload",
+            lambda season=None, status=None: {
+                "matches": self._group_stage_payload_matches(main_status="FINISHED")
+            },
+        )
+        monkeypatch.setattr(
+            service,
+            "_fetch_standings_payload",
+            lambda season=None: {
+                "standings": [
+                    {
+                        "type": "TOTAL",
+                        "group": "GROUP_A",
+                        "table": [
+                            {
+                                "team": {"tla": "ARG", "name": "Argentina"},
+                                "playedGames": 2,
+                            },
+                            {
+                                "team": {"tla": "BRA", "name": "Brasil"},
+                                "playedGames": 2,
+                            },
+                        ],
+                    }
+                ]
+            },
+        )
+
+        summary = service.sync_matches()
+
+        match.refresh_from_db()
+        assert summary.updated == 1
+        assert summary.group_recalculations == 0
+        assert summary.group_recalculations_source == "api"
+        assert called_groups == []
+
+    def test_no_aplica_standings_api_si_ultimo_partido_del_grupo_sigue_en_juego(
+        self, monkeypatch, team_argentina, team_brasil
+    ):
+        match = Match.objects.create(
+            home_team=team_argentina,
+            away_team=team_brasil,
+            phase=Match.Phase.GROUP,
+            group="A",
+            scheduled_at=datetime(2026, 6, 11, 16, 0, tzinfo=UTC),
+            is_finished=False,
+        )
+
+        called_groups: list[str] = []
+
+        monkeypatch.setattr(
+            "apps.tournament.services.football_data_sync.process_match_result",
+            lambda arg_match: [],
+        )
+        monkeypatch.setattr(
+            "apps.tournament.services.football_data_sync.process_group_first_from_standings",
+            lambda group, ranked_teams: called_groups.append(group),
+        )
+
+        service = FootballDataSyncService(api_key="token-test")
+        raw_matches = self._group_stage_payload_matches(main_status="FINISHED")
+        raw_matches[-1]["status"] = "IN_PLAY"
+        monkeypatch.setattr(
+            service,
+            "_fetch_matches_payload",
+            lambda season=None, status=None: {"matches": raw_matches},
+        )
+        monkeypatch.setattr(
+            service,
+            "_fetch_standings_payload",
+            lambda season=None: {
+                "standings": [
+                    {
+                        "type": "TOTAL",
+                        "group": "GROUP_A",
+                        "table": [
+                            {
+                                "team": {"tla": "ARG", "name": "Argentina"},
+                                "playedGames": 3,
+                            },
+                            {
+                                "team": {"tla": "BRA", "name": "Brasil"},
+                                "playedGames": 3,
+                            },
+                        ],
+                    }
+                ]
+            },
+        )
+
+        summary = service.sync_matches()
+
+        match.refresh_from_db()
+        assert summary.group_recalculations == 0
+        assert summary.group_recalculations_source == "api"
+        assert called_groups == []
 
     def test_dry_run_no_escribe_ni_recalcula(
         self, monkeypatch, team_argentina, team_brasil
