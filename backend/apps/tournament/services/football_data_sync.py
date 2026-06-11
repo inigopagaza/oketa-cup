@@ -141,9 +141,17 @@ class FootballDataSyncService:
 
         if not dry_run:
             if self.use_api_standings:
+                finished_groups = self._get_finished_local_groups()
+                if not finished_groups:
+                    logger.info(
+                        "No se recalculan standings API: no hay partidos de grupo finalizados localmente."
+                    )
+                    summary.group_recalculations_source = "none"
+                    return summary
                 try:
                     summary.group_recalculations = self._recalculate_groups_from_api(
-                        season=season
+                        season=season,
+                        groups=finished_groups,
                     )
                     summary.group_recalculations_source = "api"
                 except FootballDataSyncError as exc:
@@ -473,10 +481,16 @@ class FootballDataSyncService:
         )
         return match
 
-    def _recalculate_groups_from_api(self, *, season: int | None = None) -> int:
+    def _recalculate_groups_from_api(
+        self,
+        *,
+        season: int | None = None,
+        groups: list[str] | None = None,
+    ) -> int:
         payload = self._fetch_standings_payload(season=season)
         standings = payload.get("standings", [])
         recalculated = 0
+        target_groups = {group.upper() for group in groups or []}
 
         for standing in standings:
             standing_type = str(standing.get("type") or "").upper()
@@ -485,6 +499,8 @@ class FootballDataSyncService:
 
             group_letter = self._extract_group_letter(standing.get("group"))
             if not group_letter:
+                continue
+            if target_groups and group_letter not in target_groups:
                 continue
 
             table = standing.get("table") or []
@@ -506,6 +522,15 @@ class FootballDataSyncService:
             recalculated += 1
 
         return recalculated
+
+    def _get_finished_local_groups(self) -> list[str]:
+        groups = (
+            Match.objects.filter(phase=Match.Phase.GROUP, is_finished=True)
+            .exclude(group="")
+            .values_list("group", flat=True)
+            .distinct()
+        )
+        return sorted({group for group in groups if group})
 
     def _parse_api_datetime(self, raw_value: str | None) -> datetime | None:
         if not raw_value:

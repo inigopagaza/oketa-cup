@@ -151,6 +151,34 @@ class TestFootballDataSyncService:
         assert match.decided_in_90 is True
         assert match.penalties_winner == ""
 
+    def test_no_aplica_standings_api_si_no_hay_grupos_finalizados(
+        self, monkeypatch, team_argentina, team_brasil
+    ):
+        monkeypatch.setattr(
+            "apps.tournament.services.football_data_sync.process_match_result",
+            lambda arg_match: [],
+        )
+
+        service = FootballDataSyncService(api_key="token-test")
+        monkeypatch.setattr(
+            service,
+            "_fetch_matches_payload",
+            lambda season=None, status=None: {"matches": []},
+        )
+
+        def fail_if_called(*args, **kwargs):
+            raise AssertionError(
+                "No debería consultarse standings API sin grupos finalizados"
+            )
+
+        monkeypatch.setattr(service, "_fetch_standings_payload", fail_if_called)
+
+        summary = service.sync_matches()
+
+        assert summary.group_recalculations == 0
+        assert summary.group_recalculations_source == "none"
+        assert summary.scored_matches == 0
+
     def test_dry_run_no_escribe_ni_recalcula(
         self, monkeypatch, team_argentina, team_brasil
     ):
