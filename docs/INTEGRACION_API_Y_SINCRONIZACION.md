@@ -167,10 +167,77 @@ Notas:
 - Ejecuta en el minuto 0 de cada hora.
 - `run --rm` crea un contenedor efímero solo para el comando.
 - Si prefieres reducir llamadas, se puede usar `--status FINISHED`.
+- La primera ejecución debe encontrar `/var/log/oketa-sync.log` ya creado con
+  permisos de escritura para `deploy`; el comando manual sin redirección no lo
+  genera.
 
 ### Rotación de logs (recomendado)
 
 Configurar `logrotate` para `/var/log/oketa-sync.log`.
+
+Pasos sugeridos en el servidor:
+
+1. Crear el fichero de configuración de logrotate:
+
+```bash
+sudo tee /etc/logrotate.d/oketa-sync >/dev/null <<'EOF'
+/var/log/oketa-sync.log {
+  daily
+  rotate 14
+  missingok
+  notifempty
+  compress
+  delaycompress
+  copytruncate
+  su deploy deploy
+  create 0640 deploy deploy
+}
+EOF
+```
+
+2. Validar sintaxis sin aplicar cambios:
+
+```bash
+sudo logrotate -d /etc/logrotate.d/oketa-sync
+```
+
+Si aparece el aviso de permisos inseguros en `/var/log`, la configuración
+necesita la directiva `su` dentro del bloque de logrotate, como en el ejemplo
+anterior.
+
+3. Forzar una rotación de prueba:
+
+```bash
+sudo logrotate -f /etc/logrotate.d/oketa-sync
+```
+
+4. Verificar que existen el log actual y rotados:
+
+```bash
+ls -lah /var/log/oketa-sync.log*
+```
+
+5. Confirmar ejecución periódica automática de logrotate:
+
+```bash
+systemctl status logrotate.timer
+systemctl list-timers | grep logrotate
+```
+
+Antes de activar el cron por primera vez, crea el log y deja permisos para el
+usuario que lo va a escribir:
+
+```bash
+sudo touch /var/log/oketa-sync.log
+sudo chown deploy:deploy /var/log/oketa-sync.log
+sudo chmod 0640 /var/log/oketa-sync.log
+```
+
+Notas:
+
+- `copytruncate` evita cortar la escritura del cron mientras rota el fichero.
+- Si usas otro usuario distinto de `deploy`, ajusta la línea `create`.
+- Si prefieres rotación semanal, cambia `daily` por `weekly`.
 
 ## 5) Fixtures y bracket (si necesitas reset completo)
 
