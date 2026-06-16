@@ -35,15 +35,21 @@ def build_daily_summary(day: date) -> str:
     finished: list[str] = []
 
     for m in matches:
+        home_flag = m.home_team.flag_emoji if m.home_team_id and m.home_team else ""
+        away_flag = m.away_team.flag_emoji if m.away_team_id and m.away_team else ""
         home = m.home_team.code if m.home_team_id else "TBD"
         away = m.away_team.code if m.away_team_id else "TBD"
+        home_label = f"{home_flag} {home}".strip()
+        away_label = f"{away_flag} {away}".strip()
         hour = m.scheduled_at.astimezone(MADRID_TZ).strftime("%H:%M")
         phase = m.get_phase_display()
 
         if m.is_finished and m.home_score is not None and m.away_score is not None:
-            finished.append(f"- {home} {m.home_score}-{m.away_score} {away} ({phase})")
+            finished.append(
+                f"- {home_label} {m.home_score}-{m.away_score} {away_label} ({phase})"
+            )
         else:
-            pending.append(f"- {hour} {home} vs {away} ({phase})")
+            pending.append(f"- {hour} {home_label} vs {away_label} ({phase})")
 
     lines = [f"⚽ Mundial 2026 — {day:%A %d/%m/%Y}", ""]
 

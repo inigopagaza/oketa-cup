@@ -80,4 +80,4 @@ class Command(BaseCommand):
         signal.signal(signal.SIGINT, _shutdown)
 
         while True:
-            time.sleep(5)
+            time.sleep(60)
