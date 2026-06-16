@@ -62,8 +62,47 @@ services:
       FOOTBALL_DATA_TIMEOUT_SECONDS: ${FOOTBALL_DATA_TIMEOUT_SECONDS:-20}
       FOOTBALL_DATA_USE_API_STANDINGS: ${FOOTBALL_DATA_USE_API_STANDINGS:-True}
       FOOTBALL_DATA_AUTO_CREATE_KNOCKOUT: ${FOOTBALL_DATA_AUTO_CREATE_KNOCKOUT:-True}
+      TZ: ${TZ:-Europe/Madrid}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
+      TELEGRAM_ENABLED: ${TELEGRAM_ENABLED:-true}
+      TELEGRAM_DRY_RUN: ${TELEGRAM_DRY_RUN:-true}
+      TELEGRAM_START_DATE: ${TELEGRAM_START_DATE:-2026-06-11}
+      TELEGRAM_END_DATE: ${TELEGRAM_END_DATE:-2026-07-20}
     ports:
       - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # ── Notifier Telegram ────────────────────────────────────────────────────
+  notifier:
+    container_name: oketa-cup-notifier
+    build:
+      context: ..
+      dockerfile: docker/backend/Dockerfile
+      target: builder
+    restart: unless-stopped
+    command: >
+      sh -c "uv sync --frozen &&
+             uv run python manage.py run_telegram_notifier"
+    volumes:
+      - ../backend:/app
+      - notifier_venv:/app/.venv
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.development
+      DB_HOST: db
+      DB_NAME: ${DB_NAME:-oketa_cup}
+      DB_USER: ${DB_USER:-oketa}
+      DB_PASSWORD: ${DB_PASSWORD:?Variable DB_PASSWORD requerida}
+      SECRET_KEY: ${SECRET_KEY:?Variable SECRET_KEY requerida}
+      TZ: ${TZ:-Europe/Madrid}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
+      TELEGRAM_ENABLED: ${TELEGRAM_ENABLED:-true}
+      TELEGRAM_DRY_RUN: ${TELEGRAM_DRY_RUN:-true}
+      TELEGRAM_START_DATE: ${TELEGRAM_START_DATE:-2026-06-11}
+      TELEGRAM_END_DATE: ${TELEGRAM_END_DATE:-2026-07-20}
     depends_on:
       db:
         condition: service_healthy
@@ -72,4 +111,6 @@ volumes:
   postgres_data:
     driver: local
   backend_venv:
+    driver: local
+  notifier_venv:
     driver: local
