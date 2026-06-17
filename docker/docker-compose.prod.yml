@@ -70,7 +70,7 @@ services:
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
       TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID}
     command: >
-      sh -c "python manage.py run_telegram_notifier"
+      sh -c "python -u manage.py run_telegram_notifier"
 
   nginx:
     image: nginx:alpine
