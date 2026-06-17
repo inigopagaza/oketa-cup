@@ -52,7 +52,7 @@ class TestDailyTelegramSummary:
 
         assert "Partidos de hoy:" in text
         assert "Resultados ya cargados:" in text
-        assert "jueves 11/06/2026" in text
+        assert "11/06/2026" in text
         assert "🇦🇷 ARG" in text
         assert "🇧🇷 BRA" in text
 

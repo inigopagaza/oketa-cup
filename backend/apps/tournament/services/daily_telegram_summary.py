@@ -8,15 +8,6 @@ from django.db.models import QuerySet
 from apps.tournament.models import Match
 
 MADRID_TZ = ZoneInfo("Europe/Madrid")
-WEEKDAY_ES = [
-    "lunes",
-    "martes",
-    "miercoles",
-    "jueves",
-    "viernes",
-    "sabado",
-    "domingo",
-]
 
 
 def _today_bounds(day: date) -> tuple[datetime, datetime]:
@@ -32,10 +23,6 @@ def _matches_for_day(day: date) -> QuerySet[Match]:
         .filter(scheduled_at__range=(start, end))
         .order_by("scheduled_at")
     )
-
-
-def _weekday_name_es(day: date) -> str:
-    return WEEKDAY_ES[day.weekday()]
 
 
 def build_daily_summary(day: date) -> str:
@@ -64,7 +51,7 @@ def build_daily_summary(day: date) -> str:
         else:
             pending.append(f"- {hour} {home_label} vs {away_label} ({phase})")
 
-    lines = [f"⚽ Mundial 2026 — {_weekday_name_es(day)} {day:%d/%m/%Y}", ""]
+    lines = [f"⚽ Mundial 2026 — {day:%d/%m/%Y}", ""]
 
     if pending:
         lines.append("📅 Partidos de hoy:")
