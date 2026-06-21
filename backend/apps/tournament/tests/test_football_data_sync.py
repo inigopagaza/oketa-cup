@@ -518,3 +518,103 @@ class TestFootballDataSyncService:
         assert created.home_team == team_argentina
         assert created.away_team == team_brasil
         assert created.venue == "Stadium API"
+
+    def test_no_actualiza_partido_local_ya_finalizado(
+        self, monkeypatch, team_argentina, team_brasil
+    ):
+        match = Match.objects.create(
+            home_team=team_argentina,
+            away_team=team_brasil,
+            phase=Match.Phase.GROUP,
+            group="A",
+            scheduled_at=datetime(2026, 6, 11, 16, 0, tzinfo=UTC),
+            home_score=2,
+            away_score=1,
+            is_finished=True,
+        )
+
+        monkeypatch.setattr(
+            "apps.tournament.services.football_data_sync.process_match_result",
+            lambda arg_match: (_ for _ in ()).throw(
+                AssertionError(
+                    "No debería recalcular puntos para partidos ya finalizados"
+                )
+            ),
+        )
+
+        service = FootballDataSyncService(api_key="token-test", use_api_standings=False)
+        monkeypatch.setattr(
+            service,
+            "_fetch_matches_payload",
+            lambda season=None, status=None: {
+                "matches": [
+                    {
+                        "utcDate": "2026-06-11T16:00:00Z",
+                        "stage": "GROUP_STAGE",
+                        "status": "FINISHED",
+                        "group": "GROUP_A",
+                        "homeTeam": {"tla": "ARG"},
+                        "awayTeam": {"tla": "BRA"},
+                        "score": {
+                            "winner": "AWAY_TEAM",
+                            "duration": "REGULAR",
+                            "fullTime": {"home": 0, "away": 3},
+                        },
+                    }
+                ]
+            },
+        )
+
+        summary = service.sync_matches()
+
+        match.refresh_from_db()
+        assert summary.updated == 0
+        assert summary.unchanged == 1
+        assert match.home_score == 2
+        assert match.away_score == 1
+        assert match.is_finished is True
+
+    def test_no_crea_partido_nuevo_si_api_ya_esta_finished(
+        self, monkeypatch, team_argentina, team_brasil
+    ):
+        monkeypatch.setattr(
+            "apps.tournament.services.football_data_sync.process_match_result",
+            lambda arg_match: [],
+        )
+
+        service = FootballDataSyncService(
+            api_key="token-test",
+            use_api_standings=False,
+            auto_create_knockout_matches=True,
+        )
+        monkeypatch.setattr(
+            service,
+            "_fetch_matches_payload",
+            lambda season=None, status=None: {
+                "matches": [
+                    {
+                        "utcDate": "2026-07-01T20:00:00Z",
+                        "stage": "QUARTER_FINALS",
+                        "status": "FINISHED",
+                        "group": None,
+                        "homeTeam": {"tla": "ARG"},
+                        "awayTeam": {"tla": "BRA"},
+                        "venue": "Stadium API",
+                        "score": {
+                            "winner": "HOME_TEAM",
+                            "duration": "REGULAR",
+                            "fullTime": {"home": 1, "away": 0},
+                        },
+                    }
+                ]
+            },
+        )
+
+        summary = service.sync_matches()
+
+        assert summary.created == 0
+        assert summary.skipped_no_local_match == 1
+        assert not Match.objects.filter(
+            phase=Match.Phase.QUARTER_FINAL,
+            scheduled_at=datetime(2026, 7, 1, 20, 0, tzinfo=UTC),
+        ).exists()
