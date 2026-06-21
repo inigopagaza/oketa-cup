@@ -109,8 +109,13 @@ class FootballDataSyncService:
             local_match = self._find_local_match(raw_match, phase)
             if local_match is None:
                 if not dry_run and self.auto_create_knockout_matches:
-                    created_match = self._create_missing_match(
-                        raw_match=raw_match, phase=phase
+                    api_finished = (raw_match.get("status") or "").upper() == "FINISHED"
+                    created_match = (
+                        None
+                        if api_finished
+                        else self._create_missing_match(
+                            raw_match=raw_match, phase=phase
+                        )
                     )
                     if created_match is not None:
                         local_match = created_match
@@ -121,6 +126,12 @@ class FootballDataSyncService:
 
             if isinstance(local_match, list):
                 summary.skipped_ambiguous += 1
+                continue
+
+            # No tocar partidos ya finalizados localmente para no pisar
+            # resultados o puntuaciones consolidadas.
+            if local_match.is_finished:
+                summary.unchanged += 1
                 continue
 
             summary.matched += 1
