@@ -156,18 +156,18 @@ class FootballDataSyncService:
                     groups_to_recalculate.add(local_match.group)
 
         if not dry_run:
+            if not groups_to_recalculate:
+                logger.info(
+                    "No se recalculan standings: no hay grupos recién finalizados en esta sincronización."
+                )
+                summary.group_recalculations_source = "none"
+                return summary
+
             if self.use_api_standings:
-                finished_groups = self._get_finished_local_groups()
-                if not finished_groups:
-                    logger.info(
-                        "No se recalculan standings API: no hay partidos de grupo finalizados localmente."
-                    )
-                    summary.group_recalculations_source = "none"
-                    return summary
                 try:
                     summary.group_recalculations = self._recalculate_groups_from_api(
                         season=season,
-                        groups=finished_groups,
+                        groups=sorted(groups_to_recalculate),
                     )
                     summary.group_recalculations_source = "api"
                 except FootballDataSyncError as exc:
