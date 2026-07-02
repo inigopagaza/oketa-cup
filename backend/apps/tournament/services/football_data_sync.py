@@ -398,7 +398,7 @@ class FootballDataSyncService:
             desired_decided_in_90 = True
             desired_penalties_winner = ""
         else:
-            desired_decided_in_90 = duration == "REGULAR" if is_finished else True
+            desired_decided_in_90 = duration == "REGULAR"
             desired_penalties_winner = ""
             if duration == "PENALTY_SHOOTOUT" and is_finished:
                 if winner == "HOME_TEAM":
