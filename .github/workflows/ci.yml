@@ -64,7 +64,7 @@ jobs:
 
       # 6. Tipado estático con mypy
       - name: Type check with mypy
-        run: uv run mypy apps config
+        run: uv run mypy --show-traceback apps config
         continue-on-error: true  # No bloquea el CI mientras se ajusta el tipado
 
       # 7. Tests con pytest + cobertura
