@@ -64,6 +64,8 @@ jobs:
 
       # 6. Tipado estático con mypy
       - name: Type check with mypy
+        env:
+          SECRET_KEY: ci-dummy
         run: uv run mypy --show-traceback apps config
         continue-on-error: true  # No bloquea el CI mientras se ajusta el tipado
 
